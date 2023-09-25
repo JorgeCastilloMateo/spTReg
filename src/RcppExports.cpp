@@ -11,6 +11,153 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
+// dtnorm
+double dtnorm(double x, double mu, double sigma, double a, double b);
+RcppExport SEXP _spTReg_dtnorm(SEXP xSEXP, SEXP muSEXP, SEXP sigmaSEXP, SEXP aSEXP, SEXP bSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< double >::type x(xSEXP);
+    Rcpp::traits::input_parameter< double >::type mu(muSEXP);
+    Rcpp::traits::input_parameter< double >::type sigma(sigmaSEXP);
+    Rcpp::traits::input_parameter< double >::type a(aSEXP);
+    Rcpp::traits::input_parameter< double >::type b(bSEXP);
+    rcpp_result_gen = Rcpp::wrap(dtnorm(x, mu, sigma, a, b));
+    return rcpp_result_gen;
+END_RCPP
+}
+// rtnorm
+double rtnorm(double mu, double sigma, double a, double b);
+RcppExport SEXP _spTReg_rtnorm(SEXP muSEXP, SEXP sigmaSEXP, SEXP aSEXP, SEXP bSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< double >::type mu(muSEXP);
+    Rcpp::traits::input_parameter< double >::type sigma(sigmaSEXP);
+    Rcpp::traits::input_parameter< double >::type a(aSEXP);
+    Rcpp::traits::input_parameter< double >::type b(bSEXP);
+    rcpp_result_gen = Rcpp::wrap(rtnorm(mu, sigma, a, b));
+    return rcpp_result_gen;
+END_RCPP
+}
+// psi1
+double psi1(double x, double alpha, double lambda);
+RcppExport SEXP _spTReg_psi1(SEXP xSEXP, SEXP alphaSEXP, SEXP lambdaSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< double >::type x(xSEXP);
+    Rcpp::traits::input_parameter< double >::type alpha(alphaSEXP);
+    Rcpp::traits::input_parameter< double >::type lambda(lambdaSEXP);
+    rcpp_result_gen = Rcpp::wrap(psi1(x, alpha, lambda));
+    return rcpp_result_gen;
+END_RCPP
+}
+// psi2
+double psi2(double x, double alpha, double lambda);
+RcppExport SEXP _spTReg_psi2(SEXP xSEXP, SEXP alphaSEXP, SEXP lambdaSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< double >::type x(xSEXP);
+    Rcpp::traits::input_parameter< double >::type alpha(alphaSEXP);
+    Rcpp::traits::input_parameter< double >::type lambda(lambdaSEXP);
+    rcpp_result_gen = Rcpp::wrap(psi2(x, alpha, lambda));
+    return rcpp_result_gen;
+END_RCPP
+}
+// rgig
+arma::vec rgig(const int N, const double a, const arma::vec b, const double nu);
+RcppExport SEXP _spTReg_rgig(SEXP NSEXP, SEXP aSEXP, SEXP bSEXP, SEXP nuSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const int >::type N(NSEXP);
+    Rcpp::traits::input_parameter< const double >::type a(aSEXP);
+    Rcpp::traits::input_parameter< const arma::vec >::type b(bSEXP);
+    Rcpp::traits::input_parameter< const double >::type nu(nuSEXP);
+    rcpp_result_gen = Rcpp::wrap(rgig(N, a, b, nu));
+    return rcpp_result_gen;
+END_RCPP
+}
+// rig
+arma::vec rig(const int N, const arma::vec mu, const double lambda);
+RcppExport SEXP _spTReg_rig(SEXP NSEXP, SEXP muSEXP, SEXP lambdaSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const int >::type N(NSEXP);
+    Rcpp::traits::input_parameter< const arma::vec >::type mu(muSEXP);
+    Rcpp::traits::input_parameter< const double >::type lambda(lambdaSEXP);
+    rcpp_result_gen = Rcpp::wrap(rig(N, mu, lambda));
+    return rcpp_result_gen;
+END_RCPP
+}
+// iidMeanRcpp
+arma::mat iidMeanRcpp(const arma::vec Y, const arma::mat X, const int N, const int k, arma::vec beta, double prec, arma::mat keep, const int nSims, const int nThin, const int nBurnin, const int nReport);
+RcppExport SEXP _spTReg_iidMeanRcpp(SEXP YSEXP, SEXP XSEXP, SEXP NSEXP, SEXP kSEXP, SEXP betaSEXP, SEXP precSEXP, SEXP keepSEXP, SEXP nSimsSEXP, SEXP nThinSEXP, SEXP nBurninSEXP, SEXP nReportSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::vec >::type Y(YSEXP);
+    Rcpp::traits::input_parameter< const arma::mat >::type X(XSEXP);
+    Rcpp::traits::input_parameter< const int >::type N(NSEXP);
+    Rcpp::traits::input_parameter< const int >::type k(kSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type beta(betaSEXP);
+    Rcpp::traits::input_parameter< double >::type prec(precSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type keep(keepSEXP);
+    Rcpp::traits::input_parameter< const int >::type nSims(nSimsSEXP);
+    Rcpp::traits::input_parameter< const int >::type nThin(nThinSEXP);
+    Rcpp::traits::input_parameter< const int >::type nBurnin(nBurninSEXP);
+    Rcpp::traits::input_parameter< const int >::type nReport(nReportSEXP);
+    rcpp_result_gen = Rcpp::wrap(iidMeanRcpp(Y, X, N, k, beta, prec, keep, nSims, nThin, nBurnin, nReport));
+    return rcpp_result_gen;
+END_RCPP
+}
+// iidQuantileRcpp
+arma::mat iidQuantileRcpp(double tau, const arma::vec Y, const arma::mat X, const int N, const int k, arma::vec beta, double prec, arma::mat keep, const int nSims, const int nThin, const int nBurnin, const int nReport);
+RcppExport SEXP _spTReg_iidQuantileRcpp(SEXP tauSEXP, SEXP YSEXP, SEXP XSEXP, SEXP NSEXP, SEXP kSEXP, SEXP betaSEXP, SEXP precSEXP, SEXP keepSEXP, SEXP nSimsSEXP, SEXP nThinSEXP, SEXP nBurninSEXP, SEXP nReportSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< double >::type tau(tauSEXP);
+    Rcpp::traits::input_parameter< const arma::vec >::type Y(YSEXP);
+    Rcpp::traits::input_parameter< const arma::mat >::type X(XSEXP);
+    Rcpp::traits::input_parameter< const int >::type N(NSEXP);
+    Rcpp::traits::input_parameter< const int >::type k(kSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type beta(betaSEXP);
+    Rcpp::traits::input_parameter< double >::type prec(precSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type keep(keepSEXP);
+    Rcpp::traits::input_parameter< const int >::type nSims(nSimsSEXP);
+    Rcpp::traits::input_parameter< const int >::type nThin(nThinSEXP);
+    Rcpp::traits::input_parameter< const int >::type nBurnin(nBurninSEXP);
+    Rcpp::traits::input_parameter< const int >::type nReport(nReportSEXP);
+    rcpp_result_gen = Rcpp::wrap(iidQuantileRcpp(tau, Y, X, N, k, beta, prec, keep, nSims, nThin, nBurnin, nReport));
+    return rcpp_result_gen;
+END_RCPP
+}
+// arMeanRcpp
+arma::mat arMeanRcpp(const arma::vec Y, const arma::mat X, const int N, const int k, arma::vec beta, double rho, double prec, arma::mat keep, const int nSims, const int nThin, const int nBurnin, const int nReport);
+RcppExport SEXP _spTReg_arMeanRcpp(SEXP YSEXP, SEXP XSEXP, SEXP NSEXP, SEXP kSEXP, SEXP betaSEXP, SEXP rhoSEXP, SEXP precSEXP, SEXP keepSEXP, SEXP nSimsSEXP, SEXP nThinSEXP, SEXP nBurninSEXP, SEXP nReportSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::vec >::type Y(YSEXP);
+    Rcpp::traits::input_parameter< const arma::mat >::type X(XSEXP);
+    Rcpp::traits::input_parameter< const int >::type N(NSEXP);
+    Rcpp::traits::input_parameter< const int >::type k(kSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type beta(betaSEXP);
+    Rcpp::traits::input_parameter< double >::type rho(rhoSEXP);
+    Rcpp::traits::input_parameter< double >::type prec(precSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type keep(keepSEXP);
+    Rcpp::traits::input_parameter< const int >::type nSims(nSimsSEXP);
+    Rcpp::traits::input_parameter< const int >::type nThin(nThinSEXP);
+    Rcpp::traits::input_parameter< const int >::type nBurnin(nBurninSEXP);
+    Rcpp::traits::input_parameter< const int >::type nReport(nReportSEXP);
+    rcpp_result_gen = Rcpp::wrap(arMeanRcpp(Y, X, N, k, beta, rho, prec, keep, nSims, nThin, nBurnin, nReport));
+    return rcpp_result_gen;
+END_RCPP
+}
 // spTMeanRcpp
 double spTMeanRcpp();
 RcppExport SEXP _spTReg_spTMeanRcpp() {
@@ -33,6 +180,15 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
+    {"_spTReg_dtnorm", (DL_FUNC) &_spTReg_dtnorm, 5},
+    {"_spTReg_rtnorm", (DL_FUNC) &_spTReg_rtnorm, 4},
+    {"_spTReg_psi1", (DL_FUNC) &_spTReg_psi1, 3},
+    {"_spTReg_psi2", (DL_FUNC) &_spTReg_psi2, 3},
+    {"_spTReg_rgig", (DL_FUNC) &_spTReg_rgig, 4},
+    {"_spTReg_rig", (DL_FUNC) &_spTReg_rig, 3},
+    {"_spTReg_iidMeanRcpp", (DL_FUNC) &_spTReg_iidMeanRcpp, 11},
+    {"_spTReg_iidQuantileRcpp", (DL_FUNC) &_spTReg_iidQuantileRcpp, 12},
+    {"_spTReg_arMeanRcpp", (DL_FUNC) &_spTReg_arMeanRcpp, 12},
     {"_spTReg_spTMeanRcpp", (DL_FUNC) &_spTReg_spTMeanRcpp, 0},
     {"_spTReg_spTQuantileRcpp", (DL_FUNC) &_spTReg_spTQuantileRcpp, 0},
     {NULL, NULL, 0}

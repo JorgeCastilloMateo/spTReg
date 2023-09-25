@@ -3,8 +3,8 @@
 #' @aliases spTReg
 #' @description 
 #'   \strong{spTReg} uses different hierarchical Bayesian 
-#'   spatio-temporal modeling strategies with spatially varying coefficients, 
-#'   namely:
+#'   spatio-temporal modeling strategies with time- and spatially-varying 
+#'   coefficients, namely:
 #'   
 #'   (1) Mean regression using Gaussian processes and Gaussian errors,
 #'   
@@ -15,9 +15,7 @@
 #'   
 #'   Main functions used: 
 #'   
-#'   (1) \code{\link{spTMean}} and \code{\link{predict.spTMean}}
-#'   
-#'   (2) \code{\link{spTQuantile}} and \code{\link{predict.spTQuantile}}
+#'   (1) \code{\link{spTm}} and \code{\link{predict.spTm}}
 #'   
 #' @docType package
 #' @author Jorge Castillo-Mateo <jorgecastillomateo@gmail.com>
@@ -25,11 +23,12 @@
 #' Castillo-Mateo J, Lafuente M, Asín J, Cebrián AC, Gelfand AE, Abaurrea J (2022). 
 #' Spatial modeling of day-within-year temperature time series: an examination of daily maximum temperatures in Aragón, Spain. 
 #' \emph{Journal of Agricultural, Biological and Environmental Statistics}, \strong{27}(3), 487--505. 
-#' \doi{10.1007/s13253-022-00493-3}
+#' \doi{10.1007/s13253-022-00493-3}.
 #' 
 #' Castillo-Mateo J, Asín J, Cebrián AC, Gelfand AE, Abaurrea J. 
 #' Spatial quantile autoregression for season within year daily maximum temperature data. 
-#' \emph{(Under review.)}
+#' \emph{Annals of Applied Statistics}, \strong{17}(3), 2305--2325. 
+#' \doi{10.1214/22-AOAS1719}
 #' 
 #' @import Rcpp
 #' @importFrom Rcpp evalCpp

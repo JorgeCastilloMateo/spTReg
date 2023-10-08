@@ -1,4 +1,4 @@
-spTReg
+spTReg <img src="inst/img/logospTReg.png" width="175px" align="right" />
 ======================
 
 [![CRAN_Status_Badge](http://www.r-pkg.org/badges/version/spTReg)](https://CRAN.R-project.org/package=spTReg)

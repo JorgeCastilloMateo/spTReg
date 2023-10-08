@@ -30,10 +30,10 @@ double psi2(double x, double alpha, double lambda){
 }
 // [[Rcpp::export]]
 arma::vec rgig(
-    const int N, 
-    const double a, 
-    const arma::vec b, 
-    const double nu) {
+  const int N, 
+  const double a, 
+  const arma::vec b, 
+  const double nu) {
   
   arma::vec X(N);
   static const double cosh1 = 1.543081;
@@ -115,27 +115,38 @@ arma::vec rgig(
 
 // [[Rcpp::export]]
 arma::vec rig(
-    const int N, 
-    const arma::vec mu, const double lambda) {
+  const int N, 
+  const arma::vec mu, 
+  const double lambda) {
   
   arma::vec X(N);
-  
-  double nu, y, z;
-  double muy, mu2lambda;
+  double V, W, C, P1, Y;
   
   for (int i = 0; i < N; ++i) {
-    nu = R::rnorm(0, 1);
-    y  = nu * nu;
-    muy       = mu(i) * y;
-    mu2lambda = mu(i) / (2 * lambda);
-    X(i) = mu(i) + 
-      muy * mu2lambda - 
-      mu2lambda * std::sqrt(4 * muy * lambda + muy * muy);
-    z = R::runif(0, 1);
-    if (z > mu(i) / (mu(i) + X(i))) {
+    V = R::rchisq(1);
+    W = mu(i) * V;
+    C = mu(i) / (2 * lambda);
+    X(i) = mu(i) + C * 
+      (W - std::sqrt(W * (4 * lambda + W)));
+    P1 = mu(i) / (mu(i) + X(i));
+    Y = R::runif(0, 1);
+    if (Y > P1) {
       X(i) = mu(i) * mu(i) / X(i);
     }
   }
+  
+  return X;
+}
+
+// [[Rcpp::export]]
+arma::vec ral(
+  const int N, 
+  const double theta, 
+  const double w2Inv,
+  const double sigma) {
+  
+  arma::vec _logU = -log(arma::randu(N));
+  arma::vec X = (theta * _logU + sqrt(_logU / w2Inv) % arma::randn(N)) * sigma;
   
   return X;
 }
@@ -181,19 +192,25 @@ arma::vec rig(
 //  return { mean, prec, decay };
 //}
 
+// iid mean model
 // [[Rcpp::export]]
 arma::mat iidMeanRcpp(
-  const arma::vec Y, const arma::mat X, 
-  const int N, const int k,
-  arma::vec beta, double prec, 
-  arma::mat keep,
-  const int nSims, const int nThin, const int nBurnin, const int nReport) {
-  
-  // prior values
-  const double na = 0;
-  const double nb = 0.000001;
-  const double ga = 0.0001;
-  const double gb = 0.0001;
+  const arma::vec Y, // data
+  const arma::mat X,
+  const arma::vec M, // prior values
+  const arma::mat P,
+  const double ga,
+  const double gb,
+  arma::vec beta,    // initial values
+  double prec,
+  const int N,       // constants
+  const int k,
+  arma::mat keep,    // replicates
+  const int nSims,   // MCMC numbers
+  const int nThin,
+  const int nBurnin,
+  const int nReport
+) {
   
   // constants
   const arma::vec XtY = X.t() * Y;
@@ -203,8 +220,7 @@ arma::mat iidMeanRcpp(
   arma::vec Z(N);
   
   // prior Mean M and Precision P of beta, PM = P * M
-  const arma::mat P  = nb * arma::mat(k, k, arma::fill::eye);
-  const arma::vec PM = P  * arma::vec(k, arma::fill::value(na));
+  const arma::vec PM = P  * M;
   
   // full posterior Variance of beta
   arma::mat V(k, k);
@@ -215,7 +231,7 @@ arma::mat iidMeanRcpp(
   // iterations
   for (int b = 1 - nBurnin; b <= nSims; ++b) {
 
-    if (b % nReport == 0) {
+    if ((b != 0) && (b % nReport == 0)) {
       Rcpp::Rcout << "Current iteration : " << b << "\n";
     }
       
@@ -233,26 +249,36 @@ arma::mat iidMeanRcpp(
     if ((b > 0) && (b % nThin == 0)) {
       keep(b / nThin - 1, arma::span(0, k - 1)) = beta.t();
       keep(b / nThin - 1, k) = prec;
+      keep(b / nThin - 1, arma::span(k + 1, k + N)) = (X * beta).t();
+        //(X * beta + arma::randn(N) / sqrt(prec)).t();
+      keep(b / nThin - 1, arma::span(k + N + 1, k + 2 * N)) = 
+        Y.t() - keep(b / nThin - 1, arma::span(k + 1, k + N));
     }
   }
   
   return keep;
 }
 
+// iid quantile model
 // [[Rcpp::export]]
 arma::mat iidQuantileRcpp(
-    double tau,
-    const arma::vec Y, const arma::mat X, 
-    const int N, const int k,
-    arma::vec beta, double prec, 
-    arma::mat keep,
-    const int nSims, const int nThin, const int nBurnin, const int nReport) {
-  
-  // prior values
-  const double na = 0;
-  const double nb = 0.000001;
-  const double ga = 0.0001;
-  const double gb = 0.0001;
+  double tau,        // quantile level
+  const arma::vec Y, // data
+  const arma::mat X,
+  const arma::vec M, // prior values
+  const arma::mat P,
+  const double ga,
+  const double gb,
+  arma::vec beta,    // initial values
+  double prec,
+  const int N,       // constants
+  const int k,
+  arma::mat keep,    // replicates
+  const int nSims,   // MCMC numbers
+  const int nThin,
+  const int nBurnin,
+  const int nReport
+) {
   
   // constants
   const double c1 = (1 - 2 * tau) / (tau * (1 - tau));
@@ -269,8 +295,7 @@ arma::mat iidQuantileRcpp(
   arma::vec Xaux(k);
   
   // prior Mean M and Precision P of beta, PM = P * M
-  const arma::mat P  = nb * arma::mat(k, k, arma::fill::eye);
-  const arma::vec PM = P  * arma::vec(k, arma::fill::value(na));
+  const arma::vec PM = P  * M;
   
   // full posterior Variance of beta
   arma::mat V(k, k);
@@ -281,8 +306,8 @@ arma::mat iidQuantileRcpp(
   // iterations
   for (int b = 1 - nBurnin; b <= nSims; ++b) {
     
-    if (b % nReport == 0) {
-      Rcpp::Rcout << "The value of b : " << b << "\n";
+    if ((b != 0) && (b % nReport == 0)) {
+      Rcpp::Rcout << "Current iteration : " << b << "\n";
     }
     
     // xi
@@ -312,6 +337,10 @@ arma::mat iidQuantileRcpp(
     if ((b > 0) && (b % nThin == 0)) {
       keep(b / nThin - 1, arma::span(0, k - 1)) = beta.t();
       keep(b / nThin - 1, k) = prec;
+      keep(b / nThin - 1, arma::span(k + 1, k + N)) = (X * beta).t();
+        //(X * beta + ral(N, c1, c2, 1 / prec)).t();
+      keep(b / nThin - 1, arma::span(k + N + 1, k + 2 * N)) = 
+        Y.t() - keep(b / nThin - 1, arma::span(k + 1, k + N));
     }
   }
   

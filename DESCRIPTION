@@ -1,8 +1,8 @@
 Package: spTReg
 Type: Package
-Title: Spatio-Temporal Mean and Quantile auto-Regression Models
-Version: 0.0.0-5
-Date: 2023-10-01
+Title: Spatio-Temporal Mean, Quantile, and Binary auto-Regression Models
+Version: 0.0.0-6
+Date: 2024-10-28
 Authors@R: c(
   person("Jorge", "Castillo-Mateo", role = c("aut","cre","cph"), email = "jorgecastillomateo@gmail.com", comment = c(ORCID = "0000-0003-3859-0248"))
   )
@@ -10,9 +10,10 @@ Author: Jorge Castillo-Mateo [aut, cre, cph] (<https://orcid.org/0000-0003-3859-
 Maintainer: Jorge Castillo-Mateo <jorgecastillomateo@gmail.com>
 Description: Fits, spatially predicts, and temporaly forecasts space-time 
   autocorrelated data in time with space-time varying slope coefficients, 
-  autorregressive coefficients and variances using: 
+  autorregressive coefficients and scale parameters using: 
   (1) Mean regression using Gaussian processes and Gaussian errors,
-  (2) Quantile regression using Gaussian processes and asymmetric Laplace errors.
+  (2) Quantile regression using Gaussian processes and asymmetric Laplace errors,
+  (3) Probit and logit binary regression using Gaussian processes.
 License: GPL (>= 2)
 URL: https://github.com/JorgeCastilloMateo/spTReg
 BugReports: https://github.com/JorgeCastilloMateo/spTReg/issues

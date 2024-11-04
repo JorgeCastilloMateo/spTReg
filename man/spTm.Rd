@@ -5,29 +5,28 @@
 \title{MCMC sampling for the space-time models}
 \usage{
 spTm(
-  y,
+  formula,
+  v,
   data,
-  model = c("mean", "quantile"),
-  location.fun = ~1,
-  ar.fun = ~-1,
-  scale.fun = ~1,
+  subset,
+  method = c("mean", "quantile"),
+  quantile = 0.5,
   coords,
-  priors,
-  starting,
-  tuning,
-  center.scale = FALSE,
-  n.samples = 10000,
+  priors = list(beta = c(0, 1/100^2), sigma = c(2, 1), decay = c(2, 100), mu = c(0,
+    1/100^2)),
+  starting = list(beta = 0, sigma = 1, betas = 0, hp = c(0, 1, 3/100)),
+  n.samples = 1000,
   n.thin = 1,
-  n.burnin = 0,
+  n.burnin = 1000,
   verbose = TRUE,
   n.report = 100,
+  model = TRUE,
+  x = FALSE,
+  y = FALSE,
   ...
 )
 }
 \arguments{
-\item{y}{A numeric vector, or the name of a column of \code{data} to 
-which the model is to be fit.}
-
 \item{data}{A data frame object with named columns giving the data to be 
 fit; any explanatory variable necessary for modeling any of the 
 parameters; and named columns \code{t}, \code{l}, and \code{i}, 
@@ -36,18 +35,7 @@ temporal scales, and space, respectively. If not found in \code{data}, the
 variables are taken from \code{environment(formula)}, typically the 
 environment from which \code{spTm} is called.}
 
-\item{location.fun, ar.fun, scale.fun}{An object of class 
-\code{\link{formula}} describing a model for each 
-parameter using columns from \code{data}. \code{data} must be supplied if 
-any of these arguments have an explanatory variable. Three options are 
-currently supported for \code{ar.fun}: the default \code{~ -1} with no 
-autoregressive term, \code{~ 1} with a common autoregressive term, and 
-\code{~ sp(1)} with a spatially-varying autoregressive term. Two options 
-are currently supported for \code{scale.fun}: the default \code{~ 1} with 
-a common scale term, and \code{~ sp(1)} with a spatially-varying scale 
-term.}
-
-\item{coords}{an \eqn{n x 2} matrix of the observation coordinates in 
+\item{coords}{a \eqn{n x 2} matrix of the observation coordinates in 
 \code{R^2} (e.g., easting and northing).}
 
 \item{priors}{a list with each tag corresponding to a parameter name. Valid 
@@ -55,14 +43,6 @@ tags are...?}
 
 \item{starting}{a list with each tag corresponding to a parameter name. Valid 
 tags are...?}
-
-\item{tuning}{a list with each tag corresponding to a parameter name. Valid 
-tags are...?}
-
-\item{center.scale}{If \code{TRUE}, non-constant columns of \eqn{X} are 
-centered on zero and scaled to have variance one. If 
-\code{\link{predict.spTm}} is subsequently called this centering and 
-scaling is applied automatically.}
 
 \item{n.samples}{The number of MCMC iterations after \code{n.burnin}.}
 
@@ -78,7 +58,29 @@ screen.}
 \item{n.report}{The interval to report Metropolis sampler acceptance and 
 MCMC progress.}
 
+\item{y}{A numeric vector, or the name of a column of \code{data} to 
+which the model is to be fit.}
+
 \item{...}{currently no additional arguments.}
+
+\item{location.fun, ar.fun, scale.fun}{An object of class 
+\code{\link{formula}} describing a model for each 
+parameter using columns from \code{data}. \code{data} must be supplied if 
+any of these arguments have an explanatory variable. Three options are 
+currently supported for \code{ar.fun}: the default \code{~ -1} with no 
+autoregressive term, \code{~ 1} with a common autoregressive term, and 
+\code{~ sp(1)} with a spatially-varying autoregressive term. Two options 
+are currently supported for \code{scale.fun}: the default \code{~ 1} with 
+a common scale term, and \code{~ sp(1)} with a spatially-varying scale 
+term.}
+
+\item{tuning}{a list with each tag corresponding to a parameter name. Valid 
+tags are...?}
+
+\item{center.scale}{If \code{TRUE}, non-constant columns of \eqn{X} are 
+centered on zero and scaled to have variance one. If 
+\code{\link{predict.spTm}} is subsequently called this centering and 
+scaling is applied automatically.}
 }
 \value{
 An object of class \code{spTm}, which is a list comprising:
@@ -95,10 +97,6 @@ An object of class \code{spTm}, which is a list comprising:
 \description{
 This function is used to draw MCMC samples using the 
   Metropolis-within-Gibbs sampler that fits the Bayesian models.
-}
-\examples{
-1 + 1
-
 }
 \references{
 Castillo-Mateo J, Lafuente M, Asín J, Cebrián AC, Gelfand AE, Abaurrea J (2022). 

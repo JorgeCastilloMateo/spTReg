@@ -46,7 +46,14 @@ the \code{\link[stats]{model.frame}} documentation.)}
 (default=0.5).}
 
 \item{priors}{a list with each tag corresponding to a parameter name. Valid 
-tags are \code{"beta"} and \code{"sigma"}.}
+tags are \code{"beta"} and \code{"sigma"}. The \code{"beta"} tag can be 
+either the vector \eqn{(a_{\bm{\beta}}, b_{\bm{\beta}})} such that 
+\eqn{\bm{\mu}_{\bm{\beta}} = a_{\bm{\beta}} \mathbf{1}_{k}} and 
+\eqn{\bm{\Sigma}_{\bm{\beta}}^{-1} = b_{\bm{\beta}} \mathbf{I}_{k}} or 
+another list with valid tags \code{"M"} and \code{"P"} corresponding to 
+the whole mean vector \eqn{\bm{\mu}_{\bm{\beta}}} and the whole precision 
+matrix \eqn{\bm{\Sigma}_{\bm{\beta}}^{-1}}, respectively. The 
+\code{"sigma"} tag can be the vector \eqn{(a_{\sigma}, b_{\sigma})}.}
 
 \item{starting}{a list with each tag corresponding to a parameter name. Valid 
 tags are \code{"beta"} and \code{"sigma"}.}
@@ -72,10 +79,11 @@ the fit (the model frame, the model matrix, the response) are returned.}
 \value{
 An object of class \code{iidm}, which is a list comprising:
   \item{p.params.samples}{a \code{coda} object of posterior samples for the 
-    model parameters, that is beta's and sigma.}
+    model parameters, that is \eqn{\bm{\beta}} and \eqn{\sigma}.}
   \item{residuals}{a \code{coda} object of the residuals, that is response 
     minus fitted values.}
-  \item{fitted.values}{the fitted mean or quantile values.}
+  \item{fitted.values}{a \code{coda} object of the fitted mean or quantile 
+    values.}
   \item{method}{the method used.}
   \item{quantile}{if method="quantile", the quantile level used.}
   \item{xlevels}{(only where relevant) a record of the levels of the factors
@@ -92,12 +100,20 @@ This function is used to draw MCMC samples using the Gibbs
   errors.
 }
 \details{
-The function \code{iidm} can fit two types of models, depending on whether
-  the mean or the quantile is of interest.
+The function \code{iidm} can fit three types of model, depending on whether
+  the mean or the quantile is of interest, or binary data is of interest.
   
-  \item{Model:}{
-  \deqn{Y_i = \mathbf{x}_i \bm{\beta} + \epsilon_i, \qquad i=1,\ldots,n,}}
-  \item{Priors:}{}
+  General model:
+  \deqn{Y_{i} = \mathbf{x}_{i} \bm{\beta} + \epsilon_{i}, \qquad i=1,\ldots,n,}
+  with \eqn{\epsilon_i \sim \text{i.i.d. } N(0, \sigma^{2})} for the mean, or 
+  \eqn{\epsilon_i \sim \text{i.i.d. } AL(0, \sigma, \tau)} for the 
+  \eqn{\tau}-th quantile.
+  
+  Priors:
+  \deqn{\bm{\beta} \sim N_{k}(\bm{\mu}_{\bm{\beta}}, \bm{\Sigma}_{\bm{\beta}}^{-1})}
+  \deqn{\sigma^{2} \sim IG(a_{\sigma}, b_{\sigma})}
+  
+  Models for binary data are not currently available.
 }
 \examples{
 ## Annette Dobson (1990) "An Introduction to Generalized Linear Models".

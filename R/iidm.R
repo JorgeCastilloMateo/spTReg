@@ -4,13 +4,21 @@
 #'   errors.
 #'   
 #' @details
-#'   The function \code{iidm} can fit two types of models, depending on whether
-#'   the mean or the quantile is of interest.
+#'   The function \code{iidm} can fit three types of model, depending on whether
+#'   the mean or the quantile is of interest, or binary data is of interest.
 #'   
-#'   Model:
-#'   \deqn{Y_i = \mathbf{x}_i \bm{\beta} + \epsilon_i, \qquad i=1,\ldots,n,}}
+#'   General model:
+#'   \deqn{Y_{i} = \mathbf{x}_{i} \bm{\beta} + \epsilon_{i}, \qquad i=1,\ldots,n,}
+#'   with \eqn{\epsilon_i \sim \text{i.i.d. } N(0, \sigma^{2})} for the mean, or 
+#'   \eqn{\epsilon_i \sim \text{i.i.d. } AL(0, \sigma, \tau)} for the 
+#'   \eqn{\tau}-th quantile.
+#'   
 #'   Priors:
-#' 
+#'   \deqn{\bm{\beta} \sim N_{k}(\bm{\mu}_{\bm{\beta}}, \bm{\Sigma}_{\bm{\beta}}^{-1})}
+#'   \deqn{\sigma^{2} \sim IG(a_{\sigma}, b_{\sigma})}
+#'   
+#'   Models for binary data are not currently available.
+#'   
 #'   
 #' @param formula an object of class \code{"\link[stats]{formula}"} (or one 
 #'   that can be coerced to that class): a symbolic description of the model to
@@ -29,7 +37,14 @@
 #' @param quantile a numeric scalar containing the quantile level of interest 
 #'   (default=0.5).
 #' @param priors a list with each tag corresponding to a parameter name. Valid 
-#'   tags are \code{"beta"} and \code{"sigma"}.
+#'   tags are \code{"beta"} and \code{"sigma"}. The \code{"beta"} tag can be 
+#'   either the vector \eqn{(a_{\bm{\beta}}, b_{\bm{\beta}})} such that 
+#'   \eqn{\bm{\mu}_{\bm{\beta}} = a_{\bm{\beta}} \mathbf{1}_{k}} and 
+#'   \eqn{\bm{\Sigma}_{\bm{\beta}}^{-1} = b_{\bm{\beta}} \mathbf{I}_{k}} or 
+#'   another list with valid tags \code{"M"} and \code{"P"} corresponding to 
+#'   the whole mean vector \eqn{\bm{\mu}_{\bm{\beta}}} and the whole precision 
+#'   matrix \eqn{\bm{\Sigma}_{\bm{\beta}}^{-1}}, respectively. The 
+#'   \code{"sigma"} tag can be the vector \eqn{(a_{\sigma}, b_{\sigma})}.
 #' @param starting a list with each tag corresponding to a parameter name. Valid 
 #'   tags are \code{"beta"} and \code{"sigma"}.
 #' @param n.samples the number of MCMC iterations after \code{n.burnin}.
@@ -46,10 +61,11 @@
 #' 
 #' @return An object of class \code{iidm}, which is a list comprising:
 #'   \item{p.params.samples}{a \code{coda} object of posterior samples for the 
-#'     model parameters, that is beta's and sigma.}
+#'     model parameters, that is \eqn{\bm{\beta}} and \eqn{\sigma}.}
 #'   \item{residuals}{a \code{coda} object of the residuals, that is response 
 #'     minus fitted values.}
-#'   \item{fitted.values}{the fitted mean or quantile values.}
+#'   \item{fitted.values}{a \code{coda} object of the fitted mean or quantile 
+#'     values.}
 #'   \item{method}{the method used.}
 #'   \item{quantile}{if method="quantile", the quantile level used.}
 #'   \item{xlevels}{(only where relevant) a record of the levels of the factors
@@ -118,23 +134,37 @@ iidm <- function(
   mf <- eval(mf, parent.frame())
   mt <- attr(mf, "terms")
   y <- stats::model.response(mf, "numeric")
-  ny <- length(y)
+  N <- length(y)
   if (stats::is.empty.model(mt)) {
     x <- NULL
-    z <- list(coefficients = numeric(), 
+    z <- list(p.params.samples = numeric(), 
               residuals = y, 
               fitted.values = 0 * y,
-              rank = 0L, 
-              df.residual = ny)
+              method = method)
   } else {
     x <- stats::model.matrix(mt, mf)
     k <- ncol(x)
-    if (!is.list(priors$beta)) 
+    if (is.list(priors$beta)) {
+      if (!all(c("M", "P") %in% names(priors$beta)))
+        stop("'priors$beta' should have the valid tags 'M' and 'P'")
+      if (length(priors$beta$M) != k)
+        stop("'priors$beta$M' should have 'length' equal to the number of regression coefficients")
+      if (!all(dim(priors$beta$P) == k))
+        stop("'priors$beta$P' should have both 'dim' equal to the number of regression coefficients")
+    } else {
+      if (length(priors$beta) != 2)
+        stop("'priors$beta' should have 'length' equal to 2")
       priors$beta <- list("M" = rep(priors$beta[1], k),
                           "P" = priors$beta[2] * diag(k))
+    }
+    if (!(length(starting$beta) %in% c(1, k)))
+      stop("'starting$beta' should have 'length' equal to 1 or to the number of regression coefficients")
     if ((length(starting$beta) == 1) && (k != 1))
       starting$beta <- rep(starting$beta, k)
-    keep <- matrix(nrow = n.samples / n.thin, ncol = k + 1 + 2 * ny)
+    if (length(starting$sigma) != 1)
+      stop("'starting$sigma' should have 'length' equal to 1")
+    #keep <- matrix(nrow = n.samples / n.thin, ncol = k + 1 + 2 * N)
+    keep <- matrix(nrow = n.samples / n.thin, ncol = k + 1)
     if (!verbose) 
       n.report <- n.samples + 1
     
@@ -148,7 +178,7 @@ iidm <- function(
         priors$sigma[2],
         starting$beta,
         1 / starting$sigma^2,
-        ny,
+        N,
         k,
         keep,
         n.samples,
@@ -170,7 +200,7 @@ iidm <- function(
         priors$sigma[2],
         starting$beta,
         1 / starting$sigma,
-        ny,
+        N,
         k,
         keep,
         n.samples,
@@ -182,25 +212,36 @@ iidm <- function(
       params[, k + 1] <- 1 / params[, k + 1]
       
     }
+    
+    #if (is.null(colnames(x))) {
+    #  colnames(params) <- c(paste0("V", 1:k), "sigma", 1:N, 1:N)
+    #} else {
+    #  colnames(params) <- c(colnames(x), "sigma", 1:N, 1:N)
+    #}
+    
+    if (is.null(colnames(x))) {
+      colnames(params) <- c(paste0("V", 1:k), "sigma")
+    } else {
+      colnames(params) <- c(colnames(x), "sigma")
+    }
+    
+    params <- coda::mcmc(params, 
+                         start = n.burnin + 1, 
+                         end = n.burnin + n.samples, 
+                         thin = n.thin)
+    
+    #z <- list(
+    #  p.params.samples = params[, 1:(k + 1)],
+    #  residuals = params[, k + 1 + N + 1:N],
+    #  fitted.values = params[, k + 1 + 1:N],
+    #  method = method
+    #)
+    
+    z <- list(
+      p.params.samples = params,
+      method = method
+    )
   }
-  
-  if (is.null(colnames(x))) {
-    colnames(params) <- c(paste0("V", 1:k), "sigma", 1:ny, 1:ny)
-  } else {
-    colnames(params) <- c(colnames(x), "sigma", 1:ny, 1:ny)
-  }
-  
-  params <- coda::mcmc(params, 
-                       start = n.burnin + 1, 
-                       end = n.burnin + n.samples, 
-                       thin = n.thin)
-  
-  z <- list(
-    p.params.samples = params[, 1:(k + 1)],
-    residuals = params[, k + 1 + ny + 1:ny],
-    fitted.values = params[, k + 1 + 1:ny],
-    method = method
-  )
   
   if (!method.mean)
     z$quantile <- quantile

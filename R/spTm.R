@@ -21,7 +21,7 @@
 #'   are currently supported for \code{scale.fun}: the default \code{~ 1} with 
 #'   a common scale term, and \code{~ sp(1)} with a spatially-varying scale 
 #'   term.
-#' @param coords an \eqn{n x 2} matrix of the observation coordinates in 
+#' @param coords a \eqn{n x 2} matrix of the observation coordinates in 
 #'   \code{R^2} (e.g., easting and northing).
 #' @param priors a list with each tag corresponding to a parameter name. Valid 
 #'   tags are...?
@@ -67,22 +67,212 @@
 #' Spatial quantile autoregression for season within year daily maximum temperature data. 
 #' \emph{Annals of Applied Statistics}, \strong{17}(3), 2305--2325. 
 #' \doi{10.1214/22-AOAS1719}
-#' 
-#' @examples
-#' 1 + 1
 #'
 #' @export
 spTm <- function(
-  y, data,
-  model = c("mean", "quantile"),
-  location.fun = ~ 1,
-  ar.fun = ~ -1,
-  scale.fun = ~ 1,
-  coords, priors, starting, tuning, 
-  center.scale = FALSE, 
-  n.samples = 10000, n.thin = 1, n.burnin = 0, 
-  verbose = TRUE, n.report = 100, ...) {
+  formula, 
+  v,
+  data, 
+  subset,
+  method = c("mean", "quantile"),
+  quantile = 0.5,
+  #ar.fun = ~ -1,
+  #scale.fun = ~ 1,
+  coords, 
+  priors = list("beta" = c(0, 1 / 100^2), 
+                "sigma" = c(2, 1),
+                # "hp" = list("mu" = , "sigma" = , "decay" = ),
+                "decay" = c(2, 100),
+                "mu" = c(0, 1 / 100^2)), 
+  starting = list("beta" = 0, "sigma" = 1, "betas" = 0, "hp" = c(0, 1, 3 / 100)), 
+  #tuning, 
+  #center.scale = FALSE, 
+  n.samples = 1000, 
+  n.thin = 1, 
+  n.burnin = 1000, 
+  verbose = TRUE,
+  n.report = 100, 
+  model = TRUE, 
+  x = FALSE, 
+  y = FALSE,
+  ...) {
   
+  method <- match.arg(method)
+  method.mean <- method == "mean"
+  if (
+    !method.mean && (
+      (length(quantile) != 1) ||
+      (!is.numeric(quantile)) ||
+      (quantile <= 0) || (quantile >= 1))
+  ) stop("'quantile' should be a number in (0, 1)")
+  if (!all(c("beta", "sigma", "decay", "mu") %in% names(priors)))
+    stop("'priors' should have the valid tags 'beta', 'sigma', 'decay', and 'mu'")
+  if (!all(c("beta", "sigma", "betas", "hp") %in% names(starting)))
+    stop("'starting' should have the valid tags 'beta', 'sigma', 'decay', and 'mu'")
   
+  ret.x <- x
+  ret.y <- y
+  cl <- match.call()
+  mf <- match.call(expand.dots = FALSE)
+  m <- match(c("formula", "data", "subset"), names(mf), 0L)
+  mf <- mf[c(1L, m)]
+  mf$drop.unused.levels <- TRUE
+  mf[[1L]] <- quote(stats::model.frame)
+  mf <- eval(mf, parent.frame())
+  mt <- attr(mf, "terms")
+  y <- stats::model.response(mf, "numeric")
+  #attr(mt, "dataClasses") <- sapply(mf, class)
+  N <- length(y)
+  if (stats::is.empty.model(mt)) {
+    x <- NULL
+    z <- list(p.params.samples = numeric(), 
+              residuals = y, 
+              fitted.values = 0 * y,
+              method = method)
+  } else {
+    x <- stats::model.matrix(mt, mf)
+    #v <- 
+    n <- nrow(coords)
+    k <- ncol(x)
+    r <- ncol(v) #sum(attr(mt, "dataClasses") == "spCoef")
+    s <- rep(1:n, each = N / n)
+    if (is.list(priors$beta)) {
+      if (!all(c("M", "P") %in% names(priors$beta)))
+        stop("'priors$beta' should have the valid tags 'M' and 'P'")
+      if (length(priors$beta$M) != k)
+        stop("'priors$beta$M' should have 'length' equal to the number of regression coefficients")
+      if (!all(dim(priors$beta$P) == k))
+        stop("'priors$beta$P' should have both 'dim' equal to the number of regression coefficients")
+    } else {
+      if (length(priors$beta) != 2)
+        stop("'priors$beta' should have 'length' equal to 2")
+      priors$beta <- list("M" = rep(priors$beta[1], k),
+                          "P" = priors$beta[2] * diag(k))
+    }
+    if (!(length(starting$beta) %in% c(1, k)))
+      stop("'starting$beta' should have 'length' equal to 1 or to the number of regression coefficients")
+    if ((length(starting$beta) == 1) && (k != 1))
+      starting$beta <- rep(starting$beta, k)
+    if (length(starting$sigma) != 1)
+      stop("'starting$sigma' should have 'length' equal to 1")
+    # if () comprobar que starting$betas sea un numero o matriz de tamaño correcto
+    if (length(starting$betas) == 1) 
+      starting$betas <- matrix(starting$betas, nrow = n, ncol = r)
+    if (length(starting$hp) == 3) 
+      starting$hp <- matrix(starting$hp, nrow = 3, ncol = r)
+    keep <- matrix(nrow = n.samples / n.thin, ncol = k + 1 + r * (n + 3))
+    if (!verbose) 
+      n.report <- n.samples + 1
+    
+    dist <- dist1(coords)
+    
+    if (method.mean) {
+      
+      params <- spMeanRcpp(
+        y,
+        x,
+        v,
+        dist,
+        priors$beta$M,
+        priors$beta$P,
+        priors$decay[1],
+        priors$decay[2],
+        priors$sigma[1],
+        priors$sigma[2],
+        priors$mu[1],
+        priors$mu[2],
+        starting$beta,
+        starting$betas,
+        1 / starting$sigma^2,
+        starting$hp,
+        N,
+        n,
+        k,
+        r,
+        s - 1,
+        keep,
+        n.samples,
+        n.thin,
+        n.burnin,
+        n.report
+      )
+
+      ind.sigma <- c(k + 1, k + 3 + n + 0:(r-1) * (n + 3))
+      params[, ind.sigma] <- 1 / sqrt(params[, ind.sigma])
+      
+    } else {
+      
+      params <- spQuantileRcpp(
+        quantile,
+        y,
+        x,
+        v,
+        dist,
+        priors$beta$M,
+        priors$beta$P,
+        priors$decay[1],
+        priors$decay[2],
+        priors$sigma[1],
+        priors$sigma[2],
+        priors$mu[1],
+        priors$mu[2],
+        starting$beta,
+        starting$betas,
+        1 / starting$sigma,
+        starting$hp,
+        N,
+        n,
+        k,
+        r,
+        s - 1,
+        keep,
+        n.samples,
+        n.thin,
+        n.burnin,
+        n.report
+      )
+      
+      params[, k + 1] <- 1 / params[, k + 1]
+      ind.sigma <- k + 3 + n + 0:(r-1) * (n + 3)
+      params[, ind.sigma] <- 1 / sqrt(params[, ind.sigma])
+    }
+    
+    colnames(params) <- 1:ncol(params)
+    if (is.null(colnames(x))) {
+      colnames(params)[1:(k+1)] <- c(paste0("V", 1:k), "sigma")
+    } else {
+      colnames(params)[1:(k+1)] <- c(colnames(x), "sigma")
+    }
+    for (m in 1:r) {
+      colnames(params)[k+1 + (m - 1) * (n + 3) + 1:(n+3)] <- 
+        c(paste0("beta", m, "(s", 1:n, ")"), 
+          paste0(c("mu", "sigma", "decay"), m))
+    }
+    
+    params <- coda::mcmc(params, 
+                         start = n.burnin + 1, 
+                         end = n.burnin + n.samples, 
+                         thin = n.thin)
+    
+    z <- list(
+      p.params.samples = params,
+      method = method
+    )
+  }
   
+  if (!method.mean)
+    z$quantile <- quantile
+  z$xlevels <- stats::.getXlevels(mt, mf)
+  z$call <- cl
+  z$terms <- mt
+  if (model) 
+    z$model <- mf
+  if (ret.x) 
+    z$x <- x
+  if (ret.y) 
+    z$y <- y
+  
+  class(z) <- "spTm"
+  
+  return(z)
 }

@@ -4,7 +4,7 @@
 \name{spTReg-package}
 \alias{spTReg-package}
 \alias{spTReg}
-\title{\strong{spTReg}: Spatio-Temporal Mean and Quantile autoRegression}
+\title{\strong{spTReg}: Spatio-Temporal Mean, Quantile, and Binary auto-Regression Models}
 \description{
 \strong{spTReg} uses different hierarchical Bayesian 
   spatio-temporal modeling strategies with time- and spatially-varying 
@@ -12,7 +12,9 @@
   
   (1) Mean regression using Gaussian processes and Gaussian errors,
   
-  (2) Quantile regression using Gaussian processes and asymmetric Laplace errors.
+  (2) Quantile regression using Gaussian processes and asymmetric Laplace errors,
+  
+  (3) Probit and logit binary regression using Gaussian processes.
 }
 \details{
 The back-end code of this package is built under \code{C++} language.

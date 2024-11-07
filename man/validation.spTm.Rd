@@ -22,6 +22,8 @@ validation.spTm(model)
 \description{
 This function is used to obtain validation metrics using MCMC
   samples.
+
+Function currently not working.
 }
 \seealso{
 \code{\link{spTm}}, \code{\link{predict.spTm}}

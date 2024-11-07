@@ -2,7 +2,7 @@
 % Please edit documentation in R/iidm.R
 \name{iidm}
 \alias{iidm}
-\title{MCMC sampling for the i.i.d. linear models}
+\title{MCMC sampling for the i.i.d. models}
 \usage{
 iidm(
   formula,
@@ -10,8 +10,8 @@ iidm(
   subset,
   method = c("mean", "quantile"),
   quantile = 0.5,
-  priors = list(beta = c(0, 1/100^2), sigma = c(2, 1)),
-  starting = list(beta = 0, sigma = 1),
+  priors = list(beta = c(0, 1/100), sigma = c(0.1, 0.1)),
+  starting = list(beta = 0.01, sigma = 1),
   n.samples = 1000,
   n.thin = 1,
   n.burnin = 1000,
@@ -53,10 +53,15 @@ either the vector \eqn{(a_{\bm{\beta}}, b_{\bm{\beta}})} such that
 another list with valid tags \code{"M"} and \code{"P"} corresponding to 
 the whole mean vector \eqn{\bm{\mu}_{\bm{\beta}}} and the whole precision 
 matrix \eqn{\bm{\Sigma}_{\bm{\beta}}^{-1}}, respectively. The 
-\code{"sigma"} tag can be the vector \eqn{(a_{\sigma}, b_{\sigma})}.}
+\code{"sigma"} tag must be the vector \eqn{(a_{\sigma}, b_{\sigma})}. 
+(See the `Details' section to check the specific notation.)}
 
 \item{starting}{a list with each tag corresponding to a parameter name. Valid 
-tags are \code{"beta"} and \code{"sigma"}.}
+tags are \code{"beta"} and \code{"sigma"}. The \code{"beta"} tag can be 
+either a number \eqn{\beta^{(0)}} such that 
+\eqn{\bm{\beta}^{(0)} = \beta^{(0)} \textbf{1}_{k}} or directly the vector
+\eqn{\bm{\beta}^{(0)}}. The \code{"sigma"} tag must be a number 
+\eqn{\sigma^{(0)}}.}
 
 \item{n.samples}{the number of MCMC iterations after \code{n.burnin}.}
 
@@ -80,12 +85,9 @@ the fit (the model frame, the model matrix, the response) are returned.}
 An object of class \code{iidm}, which is a list comprising:
   \item{p.params.samples}{a \code{coda} object of posterior samples for the 
     model parameters, that is \eqn{\bm{\beta}} and \eqn{\sigma}.}
-  \item{residuals}{a \code{coda} object of the residuals, that is response 
-    minus fitted values.}
-  \item{fitted.values}{a \code{coda} object of the fitted mean or quantile 
-    values.}
   \item{method}{the method used.}
   \item{quantile}{if method="quantile", the quantile level used.}
+  \item{rank}{the numeric rank of the fitted linear model.}
   \item{xlevels}{(only where relevant) a record of the levels of the factors
     used in fitting.}
   \item{call}{the matched call.}
@@ -111,7 +113,7 @@ The function \code{iidm} can fit three types of model, depending on whether
   
   Priors:
   \deqn{\bm{\beta} \sim N_{k}(\bm{\mu}_{\bm{\beta}}, \bm{\Sigma}_{\bm{\beta}}^{-1})}
-  \deqn{\sigma^{2} \sim IG(a_{\sigma}, b_{\sigma})}
+  \deqn{\sigma^{2} \text{ (mean)}, \sigma \text{ (quantile)} \sim IG(a_{\sigma}, b_{\sigma})}
   
   Models for binary data are not currently available.
 }
@@ -127,6 +129,20 @@ iidm.D9 <- iidm(weight ~ group, verbose = FALSE)
 set.seed(12345)
 iidm.D90 <- iidm(weight ~ group - 1, verbose = FALSE) # omitting intercept
 
+}
+\references{
+Kozumi H, Kobayashi G (2011). 
+Gibbs sampling methods for Bayesian quantile regression. 
+\emph{Journal of Statistical Computation and Simulation}, \strong{81}(11), 1565--1578. 
+\doi{10.1080/00949655.2010.496117}
+
+Yu K, Moyeed RA (2001). 
+Bayesian quantile regression. 
+\emph{Statistics & Probability Letters}, \strong{54}(4), 437--447.
+\doi{10.1016/S0167-7152(01)00124-9}
+}
+\seealso{
+\code{\link{confint.iidm}}, \code{\link{predict.iidm}}
 }
 \author{
 Jorge Castillo-Mateo

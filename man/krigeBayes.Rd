@@ -13,13 +13,13 @@ krigeBayes(w, hp, coords, newcoords, ...)
 \item{hp}{a \eqn{B \times 3} matrix with columns \eqn{\mu}, \eqn{\sigma},
 and \eqn{\phi}.}
 
+\item{coords}{a \eqn{n \times 2} matrix of the observation coordinates 
+in \eqn{D \subset R^{2}}.}
+
 \item{newcoords}{a \eqn{n_{0} \times 2} matrix of the new coordinates to 
 krige, this is a grid \eqn{G_{D} \subset D \subset R^{2}}.}
 
 \item{...}{additional argument(s) for methods.}
-
-\item{coods}{a \eqn{n \times 2} matrix of the observation coordinates 
-in \eqn{D \subset R^{2}}.}
 }
 \value{
 a \code{coda} object of posterior samples for the kriged 
@@ -30,8 +30,9 @@ a \code{coda} object of posterior samples for the kriged
 Bayesian kriging for a spatially varying coefficient in terms
   of the coefficients in the observation coordinates and the hyperparameters
   of the Gaussian process prior.
-}
-\details{
+
+Function currently working but under development. 
+
 \deqn{w(\mathbf{s}) \sim GP(\mu, C(\mathbf{s}, \mathbf{s}^{\prime}; \sigma^{2}, \phi))}
 }
 \author{

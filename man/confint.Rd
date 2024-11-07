@@ -2,31 +2,35 @@
 % Please edit documentation in R/confint.R
 \name{confint.iidm}
 \alias{confint.iidm}
+\alias{confint.spTm}
 \title{Credible intervals for model parameters}
 \usage{
-\method{confint}{iidm}(object, parm, level = 0.95, ...)
+\method{confint}{iidm}(object, param, level = 0.95, ...)
+
+\method{confint}{spTm}(object, param, level = 0.95, ...)
 }
 \arguments{
 \item{object}{a fitted model object. Methods currently exist for the classes 
-\code{"iidm"}, ... and ... .}
+\code{"iidm"} and \code{"spTm"}.}
 
-\item{parm}{a specification of which parameters are to be given credible 
+\item{param}{a specification of which parameters are to be given credible 
 intervals, either a vector of numbers or a vector of names. If missing, 
 all parameters are considered.}
 
 \item{level}{the credible level required.}
 
-\item{...}{additional argument(s) for methods.}
+\item{...}{currently no additional arguments.}
 }
 \value{
 A matrix (or vector) with columns giving the mean, lower and upper 
   credible limits for each parameter. These will be labelled as Estimate, 
-  (1 - level)/2 and 1 - (1 - level)/2 in \% (by default 2.5\% and 97.5\%).
+  \eqn{(1 - \code{level})/2} and \eqn{1 - (1 - \code{level})/2} in \% (by 
+  default 2.5\% and 97.5\%).
 }
 \description{
 Computes credible intervals for one or more parameters in a 
-  fitted model. Package \strong{spTReg} adds methods for \code{iidm} and ...
-  fits.
+  fitted model. Package \strong{spTReg} adds methods for \code{iidm} and 
+  \code{spTm} fits.
 }
 \details{
 \code{\link[stats]{confint}} is a generic function in package stats.
@@ -34,6 +38,9 @@ Computes credible intervals for one or more parameters in a
   These \code{confint} methods call the \code{\link[stats]{quantile}} 
   function, then find the credible intervals through the empirical quantiles
   of the posterior samples.
+}
+\seealso{
+\code{\link{spTm}}, \code{\link{iidm}}
 }
 \author{
 Jorge Castillo-Mateo

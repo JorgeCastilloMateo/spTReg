@@ -2,6 +2,9 @@
 #' @aliases summary.iidm
 #' 
 #' @description \code{summary} method for class \code{"iidm"}.
+#' 
+#' @description
+#'   Function currently not working.
 #'  
 #' @param object an object of class \code{"iidm"}, usually, a result of a call 
 #'   to \code{\link{iidm}}. 

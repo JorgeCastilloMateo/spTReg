@@ -7,7 +7,9 @@ spTReg <img src="inst/img/logospTReg.png" width="175px" align="right" />
 [![Downloads](https://cranlogs.r-pkg.org/badges/grand-total/spTReg?color=red)](https://CRAN.R-project.org/package=spTReg)
 [![Licence](https://img.shields.io/badge/licence-GPL--3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0.en.html)
   
-The R package *spTReg* provides ?. In particular, *spTReg* consists of ?. 
+The R package *spTReg* provides functions to fit, spatially predict, and temporarily forecast space-time dependent data with space-time varying slope coefficients, autoregressive coefficients and scale parameters using: (1) Mean regression using Gaussian processes and Gaussian errors, (2) Quantile regression using Gaussian processes and asymmetric Laplace errors, (3) Probit and logit binary regression using Gaussian processes.
+
+This is a development package. The currently available functionalities are limited to fitting models with iid errors and slope coefficients varying in space-time for points (1) and (2).
 
 
 ## Installation
@@ -18,7 +20,7 @@ You can install the **stable** version **(not available, we are working here)** 
 install.packages("spTReg")
 ```
 
-You can install the **development** version **(nothing implemented yet, we are working here)** from
+You can install the **development** version from
 [GitHub](https://github.com/JorgeCastilloMateo/spTReg)
 
 ```s
@@ -28,10 +30,14 @@ remotes::install_github("JorgeCastilloMateo/spTReg")
 
 
 ## References
-Castillo-Mateo J, Asín J, Cebrián AC, Gelfand AE, Abaurrea J. (2023)
+Castillo-Mateo J, Asín J, Cebrián AC, Gelfand AE, Abaurrea J (2023)
 Spatial quantile autoregression for season within year daily maximum temperature data. 
 *Annals of Applied Statistics*, **17**(3), 2305--2325.
 <doi:10.1214/22-AOAS1719>.
+
+Castillo-Mateo J, Gelfand AE, Gracia-Tabuenca Z, Asín J, Cebrián AC (*in press*).
+Spatio-temporal modeling for record-breaking temperature events in Spain. 
+*Journal of the American Statistical Association*.
 
 Castillo-Mateo J, Lafuente M, Asín J, Cebrián AC, Gelfand AE, Abaurrea J (2022). 
 Spatial modeling of day-within-year temperature time series: an examination of daily maximum temperatures in Aragón, Spain. 

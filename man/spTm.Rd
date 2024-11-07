@@ -12,9 +12,8 @@ spTm(
   method = c("mean", "quantile"),
   quantile = 0.5,
   coords,
-  priors = list(beta = c(0, 1/100^2), sigma = c(2, 1), decay = c(2, 100), mu = c(0,
-    1/100^2)),
-  starting = list(beta = 0, sigma = 1, betas = 0, hp = c(0, 1, 3/100)),
+  priors = list(beta = c(0, 1/100), sigma = c(2, 1), decay = c(2, 100), mu = c(0, 1/100)),
+  starting = list(beta = 0.01, sigma = 1, betas = 0, hp = c(0, 1, 3/100)),
   n.samples = 1000,
   n.thin = 1,
   n.burnin = 1000,
@@ -27,43 +26,45 @@ spTm(
 )
 }
 \arguments{
-\item{data}{A data frame object with named columns giving the data to be 
-fit; any explanatory variable necessary for modeling any of the 
-parameters; and named columns \code{t}, \code{l}, and \code{i}, 
-representing the numeric index of the data in the long and short 
-temporal scales, and space, respectively. If not found in \code{data}, the
-variables are taken from \code{environment(formula)}, typically the 
-environment from which \code{spTm} is called.}
+\item{formula}{an object of class \code{"\link[stats]{formula}"} (or one 
+that can be coerced to that class): a symbolic description of the model to
+be fitted. The details of model specification are given under ‘Details’.}
 
-\item{coords}{a \eqn{n x 2} matrix of the observation coordinates in 
+\item{v}{(in addition to \code{formula}) a \eqn{N \times q} matrix of regression variables accompanying a 
+spatially varying coefficient.}
+
+\item{data}{a data frame object with named columns giving the data to be 
+fit; any explanatory variable necessary for modeling any of the 
+parameters; and named columns \code{t}, \code{l}, and \code{s}, 
+representing the numeric index of the data in the long and short 
+temporal scales, and space, respectively; sorted by space. If not found 
+in \code{data}, the variables are taken from \code{environment(formula)}, 
+typically the environment from which \code{spTm} is called.}
+
+\item{coords}{a \eqn{n \times 2} matrix of the observation coordinates in 
 \code{R^2} (e.g., easting and northing).}
 
-\item{priors}{a list with each tag corresponding to a parameter name. Valid 
-tags are...?}
+\item{priors}{a list with each tag corresponding to a parameter name.}
 
-\item{starting}{a list with each tag corresponding to a parameter name. Valid 
-tags are...?}
+\item{starting}{a list with each tag corresponding to a parameter name.}
 
-\item{n.samples}{The number of MCMC iterations after \code{n.burnin}.}
+\item{n.samples}{the number of MCMC iterations after \code{n.burnin}.}
 
-\item{n.thin}{The number of MCMC iterations kept is 1 out of \code{n.thin} 
+\item{n.thin}{the number of MCMC iterations kept is 1 out of \code{n.thin} 
 iterations.}
 
-\item{n.burnin}{The number of MCMC iterations discarded at the beginning.}
+\item{n.burnin}{the number of MCMC iterations discarded at the beginning.}
 
-\item{verbose}{If \code{TRUE}, model specification and progress of the 
+\item{verbose}{if \code{TRUE}, model specification and progress of the 
 sampler is printed to the screen. Otherwise, nothing is printed to the 
 screen.}
 
-\item{n.report}{The interval to report Metropolis sampler acceptance and 
+\item{n.report}{the interval to report Metropolis sampler acceptance and 
 MCMC progress.}
-
-\item{y}{A numeric vector, or the name of a column of \code{data} to 
-which the model is to be fit.}
 
 \item{...}{currently no additional arguments.}
 
-\item{location.fun, ar.fun, scale.fun}{An object of class 
+\item{location.fun, ar.fun, scale.fun}{(not working) an object of class 
 \code{\link{formula}} describing a model for each 
 parameter using columns from \code{data}. \code{data} must be supplied if 
 any of these arguments have an explanatory variable. Three options are 
@@ -74,16 +75,15 @@ are currently supported for \code{scale.fun}: the default \code{~ 1} with
 a common scale term, and \code{~ sp(1)} with a spatially-varying scale 
 term.}
 
-\item{tuning}{a list with each tag corresponding to a parameter name. Valid 
-tags are...?}
-
-\item{center.scale}{If \code{TRUE}, non-constant columns of \eqn{X} are 
+\item{center.scale}{(not currently available) if \code{TRUE}, non-constant 
+columns of \eqn{X} are 
 centered on zero and scaled to have variance one. If 
 \code{\link{predict.spTm}} is subsequently called this centering and 
 scaling is applied automatically.}
 }
 \value{
-An object of class \code{spTm}, which is a list comprising:
+An object of class \code{spTm}, which is a list comprising (this 
+  list of outputs must be updated):
   \item{coords}{the \eqn{n x 2} matrix specified by \code{coords}.}
   \item{p.params.samples}{A \code{coda} object of posterior samples for the 
     defined parameters.}
@@ -96,21 +96,24 @@ An object of class \code{spTm}, which is a list comprising:
 }
 \description{
 This function is used to draw MCMC samples using the 
-  Metropolis-within-Gibbs sampler that fits the Bayesian models.
+  Metropolis-within-Gibbs sampler that fits the Bayesian spatio-temporal
+  models.
+
+Function currently working but under development.
 }
 \references{
-Castillo-Mateo J, Lafuente M, Asín J, Cebrián AC, Gelfand AE, Abaurrea J (2022). 
+Castillo-Mateo J, Lafuente M, Asín J, Cebrián AC, Gelfand AE, Abaurrea J (2022).
 Spatial modeling of day-within-year temperature time series: an examination of daily maximum temperatures in Aragón, Spain. 
 \emph{Journal of Agricultural, Biological and Environmental Statistics}, \strong{27}(3), 487--505. 
 \doi{10.1007/s13253-022-00493-3}.
 
-Castillo-Mateo J, Asín J, Cebrián AC, Gelfand AE, Abaurrea J. 
+Castillo-Mateo J, Asín J, Cebrián AC, Gelfand AE, Abaurrea J (2023).
 Spatial quantile autoregression for season within year daily maximum temperature data. 
 \emph{Annals of Applied Statistics}, \strong{17}(3), 2305--2325. 
 \doi{10.1214/22-AOAS1719}
 }
 \seealso{
-\code{\link{predict.spTm}}, \code{\link{predict.spTm}}
+\code{\link{confint.spTm}}, \code{\link{predict.spTm}}
 }
 \author{
 Jorge Castillo-Mateo

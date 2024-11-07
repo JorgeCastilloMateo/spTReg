@@ -1,4 +1,4 @@
-#' @title MCMC sampling for the i.i.d. linear models
+#' @title MCMC sampling for the i.i.d. models
 #' @description This function is used to draw MCMC samples using the Gibbs 
 #'   sampler that fits the Bayesian linear regression models with i.i.d. 
 #'   errors.
@@ -15,7 +15,7 @@
 #'   
 #'   Priors:
 #'   \deqn{\bm{\beta} \sim N_{k}(\bm{\mu}_{\bm{\beta}}, \bm{\Sigma}_{\bm{\beta}}^{-1})}
-#'   \deqn{\sigma^{2} \sim IG(a_{\sigma}, b_{\sigma})}
+#'   \deqn{\sigma^{2} \text{ (mean)}, \sigma \text{ (quantile)} \sim IG(a_{\sigma}, b_{\sigma})}
 #'   
 #'   Models for binary data are not currently available.
 #'   
@@ -44,9 +44,14 @@
 #'   another list with valid tags \code{"M"} and \code{"P"} corresponding to 
 #'   the whole mean vector \eqn{\bm{\mu}_{\bm{\beta}}} and the whole precision 
 #'   matrix \eqn{\bm{\Sigma}_{\bm{\beta}}^{-1}}, respectively. The 
-#'   \code{"sigma"} tag can be the vector \eqn{(a_{\sigma}, b_{\sigma})}.
+#'   \code{"sigma"} tag must be the vector \eqn{(a_{\sigma}, b_{\sigma})}. 
+#'   (See the `Details' section to check the specific notation.)
 #' @param starting a list with each tag corresponding to a parameter name. Valid 
-#'   tags are \code{"beta"} and \code{"sigma"}.
+#'   tags are \code{"beta"} and \code{"sigma"}. The \code{"beta"} tag can be 
+#'   either a number \eqn{\beta^{(0)}} such that 
+#'   \eqn{\bm{\beta}^{(0)} = \beta^{(0)} \textbf{1}_{k}} or directly the vector
+#'   \eqn{\bm{\beta}^{(0)}}. The \code{"sigma"} tag must be a number 
+#'   \eqn{\sigma^{(0)}}.
 #' @param n.samples the number of MCMC iterations after \code{n.burnin}.
 #' @param n.thin the number of MCMC iterations kept is 1 out of \code{n.thin} 
 #'   iterations.
@@ -62,12 +67,9 @@
 #' @return An object of class \code{iidm}, which is a list comprising:
 #'   \item{p.params.samples}{a \code{coda} object of posterior samples for the 
 #'     model parameters, that is \eqn{\bm{\beta}} and \eqn{\sigma}.}
-#'   \item{residuals}{a \code{coda} object of the residuals, that is response 
-#'     minus fitted values.}
-#'   \item{fitted.values}{a \code{coda} object of the fitted mean or quantile 
-#'     values.}
 #'   \item{method}{the method used.}
 #'   \item{quantile}{if method="quantile", the quantile level used.}
+#'   \item{rank}{the numeric rank of the fitted linear model.}
 #'   \item{xlevels}{(only where relevant) a record of the levels of the factors
 #'     used in fitting.}
 #'   \item{call}{the matched call.}
@@ -77,6 +79,19 @@
 #'   \item{model}{if requested (the default), the model frame used.}
 #' 
 #' @author Jorge Castillo-Mateo
+#' 
+#' @seealso \code{\link{confint.iidm}}, \code{\link{predict.iidm}}
+#' 
+#' @references 
+#' Kozumi H, Kobayashi G (2011). 
+#' Gibbs sampling methods for Bayesian quantile regression. 
+#' \emph{Journal of Statistical Computation and Simulation}, \strong{81}(11), 1565--1578. 
+#' \doi{10.1080/00949655.2010.496117}
+#' 
+#' Yu K, Moyeed RA (2001). 
+#' Bayesian quantile regression. 
+#' \emph{Statistics & Probability Letters}, \strong{54}(4), 437--447.
+#' \doi{10.1016/S0167-7152(01)00124-9}
 #' 
 #' @examples
 #' ## Annette Dobson (1990) "An Introduction to Generalized Linear Models".
@@ -97,8 +112,8 @@ iidm <- function(
   subset,
   method = c("mean", "quantile"),
   quantile = 0.5,
-  priors = list("beta" = c(0, 1 / 100^2), "sigma" = c(2, 1)), 
-  starting = list("beta" = 0, "sigma" = 1), 
+  priors = list("beta" = c(0, 1 / 100), "sigma" = c(0.1, 0.1)), 
+  starting = list("beta" = 0.01, "sigma" = 1), 
   n.samples = 1000, 
   n.thin = 1, 
   n.burnin = 1000, 
@@ -137,9 +152,8 @@ iidm <- function(
   N <- length(y)
   if (stats::is.empty.model(mt)) {
     x <- NULL
+    k <- 0L
     z <- list(p.params.samples = numeric(), 
-              residuals = y, 
-              fitted.values = 0 * y,
               method = method)
   } else {
     x <- stats::model.matrix(mt, mf)
@@ -163,7 +177,6 @@ iidm <- function(
       starting$beta <- rep(starting$beta, k)
     if (length(starting$sigma) != 1)
       stop("'starting$sigma' should have 'length' equal to 1")
-    #keep <- matrix(nrow = n.samples / n.thin, ncol = k + 1 + 2 * N)
     keep <- matrix(nrow = n.samples / n.thin, ncol = k + 1)
     if (!verbose) 
       n.report <- n.samples + 1
@@ -213,12 +226,6 @@ iidm <- function(
       
     }
     
-    #if (is.null(colnames(x))) {
-    #  colnames(params) <- c(paste0("V", 1:k), "sigma", 1:N, 1:N)
-    #} else {
-    #  colnames(params) <- c(colnames(x), "sigma", 1:N, 1:N)
-    #}
-    
     if (is.null(colnames(x))) {
       colnames(params) <- c(paste0("V", 1:k), "sigma")
     } else {
@@ -230,13 +237,6 @@ iidm <- function(
                          end = n.burnin + n.samples, 
                          thin = n.thin)
     
-    #z <- list(
-    #  p.params.samples = params[, 1:(k + 1)],
-    #  residuals = params[, k + 1 + N + 1:N],
-    #  fitted.values = params[, k + 1 + 1:N],
-    #  method = method
-    #)
-    
     z <- list(
       p.params.samples = params,
       method = method
@@ -245,6 +245,7 @@ iidm <- function(
   
   if (!method.mean)
     z$quantile <- quantile
+  z$rank <- k
   z$xlevels <- stats::.getXlevels(mt, mf)
   z$call <- cl
   z$terms <- mt

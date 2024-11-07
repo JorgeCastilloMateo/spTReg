@@ -34,6 +34,8 @@ The function \code{summary.iidm} computes and returns a list of
 }
 \description{
 \code{summary} method for class \code{"iidm"}.
+
+Function currently not working.
 }
 \references{
 Gelman A, Goodrich B, Gabry J, Vehtari A (2018). 

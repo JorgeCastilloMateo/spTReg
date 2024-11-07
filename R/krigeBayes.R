@@ -4,7 +4,8 @@
 #'   of the coefficients in the observation coordinates and the hyperparameters
 #'   of the Gaussian process prior.
 #'   
-#' @details 
+#' @description
+#'   Function currently working but under development. 
 #' 
 #' \deqn{w(\mathbf{s}) \sim GP(\mu, C(\mathbf{s}, \mathbf{s}^{\prime}; \sigma^{2}, \phi))}
 #' 

@@ -528,8 +528,8 @@ arma::mat spMeanRcpp(
   // full posterior Variance of betas
   arma::mat Vn(n, n);
   // full posterior parameters chi delta of mu
-  double chi;
-  double delta;
+  //double chi;
+  //double delta;
   // full posterior parameters A B of prec, and C - of prec (betas)
   double A = N / 2 + ga;
   double B;
@@ -730,8 +730,8 @@ arma::mat spQuantileRcpp(
   // full posterior Variance of betas
   arma::mat Vn(n, n);
   // full posterior parameters chi delta of mu
-  double chi;
-  double delta;
+  //double chi;
+  //double delta;
   // full posterior parameters A B of prec, and C - of prec (betas)
   double A = 3 * N / 2 + ga;
   double B;

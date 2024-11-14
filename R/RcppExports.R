@@ -33,8 +33,8 @@ rig <- function(N, mu, lambda) {
     .Call('_spTReg_rig', PACKAGE = 'spTReg', N, mu, lambda)
 }
 
-ral <- function(N, theta, w2Inv, sigma) {
-    .Call('_spTReg_ral', PACKAGE = 'spTReg', N, theta, w2Inv, sigma)
+ral <- function(sigma, tau) {
+    .Call('_spTReg_ral', PACKAGE = 'spTReg', sigma, tau)
 }
 
 iidMeanRcpp <- function(Y, X, M, P, ga, gb, beta, prec, N, k, keep, nSims, nThin, nBurnin, nReport) {

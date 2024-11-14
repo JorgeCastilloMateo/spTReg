@@ -5,27 +5,30 @@
 \alias{predict.spTm}
 \title{Spatial and temporal predictions for the space-time models}
 \usage{
-\method{predict}{iidm}(object, newdata = NULL, type = c("response", "parameter"), ...)
+\method{predict}{iidm}(object, newdata, type = c("signal", "response"), ...)
 
 \method{predict}{spTm}(
   object,
   newdata = NULL,
   newcoords = NULL,
-  type = c("response", "parameter"),
+  type = c("signal", "response"),
   ...
 )
 }
 \arguments{
-\item{object}{Object of class "spTm".}
+\item{object}{Object of class \code{"iidm"} or \code{"spTm"}.}
 
-\item{newdata}{An optional data set providing the explanatory variables for
-spatial prediction or temporal forecasts. This data should have the same 
-space-time structure as the original \code{data}, see \code{\link{spTm}}.
-The index columns \code{t}, \code{l}, and \code{i} must follow the 
-numbering started at \code{data}, e.g., the first new location must be 
-$n+1$. If omitted, the fitted values are used.}
+\item{newdata}{An optional data frame in which to look for variables with 
+  which to predict. If omitted, the fitted values are used.
 
-\item{type}{working}
+  An optional data set providing the explanatory variables for
+  spatial prediction or temporal forecasts. This data should have the same 
+  space-time structure as the original \code{data}, see \code{\link{spTm}}.
+  The index columns \code{t}, \code{l}, and \code{i} must follow the 
+  numbering started at \code{data}, e.g., the first new location must be 
+  $n+1$. If omitted, the fitted values are used.}
+
+\item{type}{Type of prediction (signal or response). Can be abbreviated.}
 
 \item{...}{currently no additional arguments.}
 
@@ -34,7 +37,7 @@ locations are in similar format to \code{coords}, see \code{\link{spTm}}.
 If omitted, the fitted values are used.}
 }
 \value{
-A matrix that holds the response variable posterior predictive 
+A \code{coda} object holds the response variable posterior predictive 
   samples (or posterior quantile samples). The rows of this matrix 
   correspond to the posterior predictive samples and the columns are the 
   predicted values.
@@ -42,8 +45,15 @@ A matrix that holds the response variable posterior predictive
 \description{
 This function is used to obtain spatial predictions and also to
   get the temporal forecasts using MCMC samples.
-
-Function currently not working.
+}
+\details{
+Function currently working for iidm, not working for spTm.
+  
+  If \code{type = "signal"}, the function computes the product 
+  \eqn{\textbf{X}_{\text{new}} \bm{\beta}}.
+  
+  If \code{type = "response"}, the function computes the previous product 
+  and adds a Gaussian or Laplacian error as appropriate.
 }
 \seealso{
 \code{\link{iidm}}, \code{\link{spTm}}

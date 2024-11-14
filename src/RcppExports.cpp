@@ -116,16 +116,14 @@ BEGIN_RCPP
 END_RCPP
 }
 // ral
-arma::vec ral(const int N, const double theta, const double w2Inv, const double sigma);
-RcppExport SEXP _spTReg_ral(SEXP NSEXP, SEXP thetaSEXP, SEXP w2InvSEXP, SEXP sigmaSEXP) {
+arma::vec ral(const arma::vec sigma, const double tau);
+RcppExport SEXP _spTReg_ral(SEXP sigmaSEXP, SEXP tauSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const int >::type N(NSEXP);
-    Rcpp::traits::input_parameter< const double >::type theta(thetaSEXP);
-    Rcpp::traits::input_parameter< const double >::type w2Inv(w2InvSEXP);
-    Rcpp::traits::input_parameter< const double >::type sigma(sigmaSEXP);
-    rcpp_result_gen = Rcpp::wrap(ral(N, theta, w2Inv, sigma));
+    Rcpp::traits::input_parameter< const arma::vec >::type sigma(sigmaSEXP);
+    Rcpp::traits::input_parameter< const double >::type tau(tauSEXP);
+    rcpp_result_gen = Rcpp::wrap(ral(sigma, tau));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -305,7 +303,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_spTReg_psi2", (DL_FUNC) &_spTReg_psi2, 3},
     {"_spTReg_rgig", (DL_FUNC) &_spTReg_rgig, 4},
     {"_spTReg_rig", (DL_FUNC) &_spTReg_rig, 3},
-    {"_spTReg_ral", (DL_FUNC) &_spTReg_ral, 4},
+    {"_spTReg_ral", (DL_FUNC) &_spTReg_ral, 2},
     {"_spTReg_iidMeanRcpp", (DL_FUNC) &_spTReg_iidMeanRcpp, 15},
     {"_spTReg_iidQuantileRcpp", (DL_FUNC) &_spTReg_iidQuantileRcpp, 16},
     {"_spTReg_arMeanRcpp", (DL_FUNC) &_spTReg_arMeanRcpp, 12},

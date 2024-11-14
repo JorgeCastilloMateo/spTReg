@@ -173,15 +173,18 @@ arma::vec rig(
 
 // [[Rcpp::export]]
 arma::vec ral(
-  const int N, 
-  const double theta, 
-  const double w2Inv,
-  const double sigma) {
+  const arma::vec sigma,
+  const double tau) {
   
-  arma::vec _logU = -log(arma::randu(N));
-  arma::vec X = (theta * _logU + sqrt(_logU / w2Inv) % arma::randn(N)) * sigma;
+  const int N = sigma.n_elem;
+  const double aux = (tau * (1 - tau));
+  const double theta = (1 - 2 * tau) / aux;
+  const double w2 = 2 / aux;
   
-  return X;
+  arma::vec U = - log(arma::randu(N));
+  U = (theta * U + sqrt(w2 * U) % arma::randn(N)) % sigma;
+  
+  return U;
 }
 
 //// [[Rcpp::export]]

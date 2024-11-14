@@ -30,7 +30,7 @@ remotes::install_github("JorgeCastilloMateo/spTReg")
 
 
 ## References
-Castillo-Mateo J, Asín J, Cebrián AC, Gelfand AE, Abaurrea J (2023)
+Castillo-Mateo J, Asín J, Cebrián AC, Gelfand AE, Abaurrea J (2023).
 Spatial quantile autoregression for season within year daily maximum temperature data. 
 *Annals of Applied Statistics*, **17**(3), 2305--2325.
 <doi:10.1214/22-AOAS1719>.

@@ -85,6 +85,9 @@ the fit (the model frame, the model matrix, the response) are returned.}
 An object of class \code{iidm}, which is a list comprising:
   \item{p.params.samples}{a \code{coda} object of posterior samples for the 
     model parameters, that is \eqn{\bm{\beta}} and \eqn{\sigma}.}
+  \item{mcmc}{a list with information of the MCMC chain, that is 
+    \code{n.samples}, \code{n.thin}, \code{n.burnin}, and CPU \code{time} 
+    used.}
   \item{method}{the method used.}
   \item{quantile}{if method="quantile", the quantile level used.}
   \item{rank}{the numeric rank of the fitted linear model.}
@@ -112,7 +115,7 @@ The function \code{iidm} can fit three types of model, depending on whether
   \eqn{\tau}-th quantile.
   
   Priors:
-  \deqn{\bm{\beta} \sim N_{k}(\bm{\mu}_{\bm{\beta}}, \bm{\Sigma}_{\bm{\beta}}^{-1})}
+  \deqn{\bm{\beta} \sim N_{k}(\bm{\mu}_{\bm{\beta}}, \bm{\Sigma}_{\bm{\beta}})}
   \deqn{\sigma^{2} \text{ (mean)}, \sigma \text{ (quantile)} \sim IG(a_{\sigma}, b_{\sigma})}
   
   Models for binary data are not currently available.

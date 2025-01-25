@@ -6,11 +6,19 @@
 #' @description
 #'   Function currently working but under development.
 #'   
+#'   Model:
+#'   
+#'   \deqn{\mathbf{Y}_{t\ell} = \mathbf{O}_{t\ell} + \mathbf{P} (\mathbf{Y}_{t,\ell-1} - \mathbf{O}_{t,\ell-1}) + \bm{\epsilon}_{t\ell},}
+#'   \deqn{\mathbf{O}_{t\ell} = \mathbf{X}_{t\ell} \bm{\beta} + \mathbf{U}_{t\ell} \bm{\gamma}_{t} + \sum_{m=1}^{r} \mathbf{V}_{t\ell,m} \bm{\alpha}_{m},}
+#'   \deqn{\bm{\epsilon}_{t\ell} \sim \text{i.i.d. } N_{n}(\mathbf{0}_{n}, \bm{\Sigma}).}
+#'   
 #' @param formula an object of class \code{"\link[stats]{formula}"} (or one 
 #'   that can be coerced to that class): a symbolic description of the model to
 #'   be fitted. The details of model specification are given under ‘Details’.
-#' @param v (in addition to \code{formula}) a \eqn{N \times q} matrix of regression variables accompanying a 
-#'   spatially varying coefficient.
+#' @param u,v (in addition to \code{formula}) \eqn{N \times q} and 
+#'   \eqn{N \times r} matrices of regression variables accompanying a 
+#'   time-varying coefficient and a spatially-varying coefficient, 
+#'   respectively.
 #' @param data a data frame object with named columns giving the data to be 
 #'   fit; any explanatory variable necessary for modeling any of the 
 #'   parameters; and named columns \code{t}, \code{l}, and \code{s}, 
@@ -78,6 +86,7 @@
 #' @export
 spTm <- function(
   formula, 
+  u,
   v,
   data, 
   subset,
@@ -87,11 +96,21 @@ spTm <- function(
   #scale.fun = ~ 1,
   coords, 
   priors = list("beta" = c(0, 1 / 100), 
-                "sigma" = c(2, 1),
-                # "hp" = list("mu" = , "sigma" = , "decay" = ),
-                "decay" = c(2, 100),
-                "mu" = c(0, 1 / 100)), 
-  starting = list("beta" = 0.01, "sigma" = 1, "betas" = 0, "hp" = c(0, 1, 3 / 100)),
+                "sigma" = c(0.1, 0.1),
+                "rho" = c(0, 1 / 100),
+                "hpGamma" = list("sigma" = c(0.1, 0.1), "rho" = c(0, 1 / 100)),
+                "hpAlpha" = list("prec0" = 1 / 100, "sigma" = c(0.1, 0.1), "phi" = c(2, 100)),
+                "hpSigma" = list("mu" = 0, "sigma" = c(0.1, 0.1), "phi" = c(2, 100)),
+                "hpRho" = list("mu" = 0, "sigma" = c(0.1, 0.1), "phi" = c(2, 100))),
+  starting = list("beta" = 0.01, 
+                  "sigma" = 1, 
+                  "rho" = 0,
+                  "gamma" = 0, 
+                  "alpha" = 0, 
+                  "hpGamma" = c("sigma" = 1, "phi" = 3 / 100),
+                  "hpAlpha" = c("sigma" = 1, "phi" = 3 / 100),
+                  "hpSigma" = c("mu" = 0, "sigma" = 1, "phi" = 3 / 100),
+                  "hpRho" = c("mu" = 0, "sigma" = 1, "phi" = 3 / 100)),
   n.samples = 1000, 
   n.thin = 1, 
   n.burnin = 1000, 
@@ -110,10 +129,10 @@ spTm <- function(
       (!is.numeric(quantile)) ||
       (quantile <= 0) || (quantile >= 1))
   ) stop("'quantile' should be a number in (0, 1)")
-  if (!all(c("beta", "sigma", "decay", "mu") %in% names(priors)))
-    stop("'priors' should have the valid tags 'beta', 'sigma', 'decay', and 'mu'")
-  if (!all(c("beta", "sigma", "betas", "hp") %in% names(starting)))
-    stop("'starting' should have the valid tags 'beta', 'sigma', 'decay', and 'mu'")
+  if (!all(c("beta", "sigma", "phi", "mu") %in% names(priors)))
+    stop("'priors' should have the valid tags 'beta', 'sigma', 'phi', and 'mu'")
+  if (!all(c("beta", "sigma", "alpha", "hp") %in% names(starting)))
+    stop("'starting' should have the valid tags 'beta', 'sigma', 'phi', and 'mu'")
   
   ret.x <- x
   ret.y <- y
@@ -136,36 +155,49 @@ spTm <- function(
               method = method)
   } else {
     x <- stats::model.matrix(mt, mf)
+    #u <-
     #v <- 
     n <- nrow(coords)
-    k <- ncol(x)
-    r <- ncol(v) #sum(attr(mt, "dataClasses") == "spCoef")
+    p <- ncol(x)
+    if (missing(u) || is.null(u)) {
+      q <- 0
+    } else {
+      q <- ncol(u) #sum(attr(mt, "dataClasses") == "tpCoef")
+    }
+    if (missing(v) || is.null(v)) {
+      r <- 0
+    } else {
+      r <- ncol(v) #sum(attr(mt, "dataClasses") == "spCoef")
+    }
     s <- rep(1:n, each = N / n)
+    
+    # check priors and starting of beta
     if (is.list(priors$beta)) {
       if (!all(c("M", "P") %in% names(priors$beta)))
         stop("'priors$beta' should have the valid tags 'M' and 'P'")
-      if (length(priors$beta$M) != k)
+      if (length(priors$beta$M) != p)
         stop("'priors$beta$M' should have 'length' equal to the number of regression coefficients")
-      if (!all(dim(priors$beta$P) == k))
+      if (!all(dim(priors$beta$P) == p))
         stop("'priors$beta$P' should have both 'dim' equal to the number of regression coefficients")
     } else {
       if (length(priors$beta) != 2)
         stop("'priors$beta' should have 'length' equal to 2")
-      priors$beta <- list("M" = rep(priors$beta[1], k),
-                          "P" = priors$beta[2] * diag(k))
+      priors$beta <- list("M" = rep(priors$beta[1], p),
+                          "P" = priors$beta[2] * diag(p))
     }
-    if (!(length(starting$beta) %in% c(1, k)))
+    if (!(length(starting$beta) %in% c(1, p)))
       stop("'starting$beta' should have 'length' equal to 1 or to the number of regression coefficients")
-    if ((length(starting$beta) == 1) && (k != 1))
-      starting$beta <- rep(starting$beta, k)
+    if ((length(starting$beta) == 1) && (p != 1))
+      starting$beta <- rep(starting$beta, p)
     if (length(starting$sigma) != 1)
       stop("'starting$sigma' should have 'length' equal to 1")
-    # if () comprobar que starting$betas sea un numero o matriz de tamaño correcto
-    if (length(starting$betas) == 1) 
-      starting$betas <- matrix(starting$betas, nrow = n, ncol = r)
+    # if () comprobar que starting$betat sea un numero o matriz de tamaño correcto
+    # if () comprobar que starting$alpha sea un numero o matriz de tamaño correcto
+    if (length(starting$alpha) == 1) 
+      starting$alpha <- matrix(starting$alpha, nrow = n, ncol = r)
     if (length(starting$hp) == 3) 
       starting$hp <- matrix(starting$hp, nrow = 3, ncol = r)
-    keep <- matrix(nrow = n.samples / n.thin, ncol = k + 1 + r * (n + 3))
+    keep <- matrix(nrow = n.samples / n.thin, ncol = p + 1 + r * (n + 3))
     if (!verbose) 
       n.report <- n.samples + 1
     
@@ -176,23 +208,26 @@ spTm <- function(
       params <- spMeanRcpp(
         y,
         x,
+        u,
         v,
         dist,
         priors$beta$M,
         priors$beta$P,
-        priors$decay[1],
-        priors$decay[2],
+        priors$phi[1],
+        priors$phi[2],
         priors$sigma[1],
         priors$sigma[2],
         priors$mu[1],
         priors$mu[2],
         starting$beta,
-        starting$betas,
+        starting$gamma,
+        starting$alpha,
         1 / starting$sigma^2,
         starting$hp,
         N,
         n,
-        k,
+        p,
+        q,
         r,
         s - 1,
         keep,
@@ -202,7 +237,7 @@ spTm <- function(
         n.report
       )
 
-      ind.sigma <- c(k + 1, k + 3 + n + 0:(r-1) * (n + 3))
+      ind.sigma <- c(p + 1, p + 3 + n + 0:(r-1) * (n + 3))
       params[, ind.sigma] <- 1 / sqrt(params[, ind.sigma])
       
     } else {
@@ -215,19 +250,19 @@ spTm <- function(
         dist,
         priors$beta$M,
         priors$beta$P,
-        priors$decay[1],
-        priors$decay[2],
+        priors$phi[1],
+        priors$phi[2],
         priors$sigma[1],
         priors$sigma[2],
         priors$mu[1],
         priors$mu[2],
         starting$beta,
-        starting$betas,
+        starting$alpha,
         1 / starting$sigma,
         starting$hp,
         N,
         n,
-        k,
+        p,
         r,
         s - 1,
         keep,
@@ -237,21 +272,21 @@ spTm <- function(
         n.report
       )
       
-      params[, k + 1] <- 1 / params[, k + 1]
-      ind.sigma <- k + 3 + n + 0:(r-1) * (n + 3)
+      params[, p + 1] <- 1 / params[, p + 1]
+      ind.sigma <- p + 3 + n + 0:(r-1) * (n + 3)
       params[, ind.sigma] <- 1 / sqrt(params[, ind.sigma])
     }
     
     colnames(params) <- 1:ncol(params)
     if (is.null(colnames(x))) {
-      colnames(params)[1:(k+1)] <- c(paste0("V", 1:k), "sigma")
+      colnames(params)[1:(p+1)] <- c(paste0("V", 1:p), "sigma")
     } else {
-      colnames(params)[1:(k+1)] <- c(colnames(x), "sigma")
+      colnames(params)[1:(p+1)] <- c(colnames(x), "sigma")
     }
     for (m in 1:r) {
-      colnames(params)[k+1 + (m - 1) * (n + 3) + 1:(n+3)] <- 
+      colnames(params)[p+1 + (m - 1) * (n + 3) + 1:(n+3)] <- 
         c(paste0("beta", m, "(s", 1:n, ")"), 
-          paste0(c("mu", "sigma", "decay"), m))
+          paste0(c("mu", "sigma", "phi"), m))
     }
     
     params <- coda::mcmc(params, 

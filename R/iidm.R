@@ -4,8 +4,8 @@
 #'   errors.
 #'   
 #' @details
-#'   The function \code{iidm} can fit three types of model, depending on whether
-#'   the mean or the quantile is of interest, or binary data is of interest.
+#'   The function \code{iidm} can fit two types of model, depending on whether
+#'   the mean or the quantile is of interest.
 #'   
 #'   General model:
 #'   \deqn{Y_{i} = \mathbf{x}_{i} \bm{\beta} + \epsilon_{i}, \qquad i=1,\ldots,n,}
@@ -14,11 +14,8 @@
 #'   \eqn{\tau}-th quantile.
 #'   
 #'   Priors:
-#'   \deqn{\bm{\beta} \sim N_{k}(\bm{\mu}_{\bm{\beta}}, \bm{\Sigma}_{\bm{\beta}})}
+#'   \deqn{\bm{\beta} \sim N_{p}(\bm{\mu}_{\bm{\beta}}, \bm{\Sigma}_{\bm{\beta}})}
 #'   \deqn{\sigma^{2} \text{ (mean)}, \sigma \text{ (quantile)} \sim IG(a_{\sigma}, b_{\sigma})}
-#'   
-#'   Models for binary data are not currently available.
-#'   
 #'   
 #' @param formula an object of class \code{"\link[stats]{formula}"} (or one 
 #'   that can be coerced to that class): a symbolic description of the model to
@@ -39,8 +36,8 @@
 #' @param priors a list with each tag corresponding to a parameter name. Valid 
 #'   tags are \code{"beta"} and \code{"sigma"}. The \code{"beta"} tag can be 
 #'   either the vector \eqn{(a_{\bm{\beta}}, b_{\bm{\beta}})} such that 
-#'   \eqn{\bm{\mu}_{\bm{\beta}} = a_{\bm{\beta}} \mathbf{1}_{k}} and 
-#'   \eqn{\bm{\Sigma}_{\bm{\beta}}^{-1} = b_{\bm{\beta}} \mathbf{I}_{k}} or 
+#'   \eqn{\bm{\mu}_{\bm{\beta}} = a_{\bm{\beta}} \mathbf{1}_{p}} and 
+#'   \eqn{\bm{\Sigma}_{\bm{\beta}}^{-1} = b_{\bm{\beta}} \mathbf{I}_{p}} or 
 #'   another list with valid tags \code{"M"} and \code{"P"} corresponding to 
 #'   the whole mean vector \eqn{\bm{\mu}_{\bm{\beta}}} and the whole precision 
 #'   matrix \eqn{\bm{\Sigma}_{\bm{\beta}}^{-1}}, respectively. The 
@@ -49,7 +46,7 @@
 #' @param starting a list with each tag corresponding to a parameter name. Valid 
 #'   tags are \code{"beta"} and \code{"sigma"}. The \code{"beta"} tag can be 
 #'   either a number \eqn{\beta^{(0)}} such that 
-#'   \eqn{\bm{\beta}^{(0)} = \beta^{(0)} \textbf{1}_{k}} or directly the vector
+#'   \eqn{\bm{\beta}^{(0)} = \beta^{(0)} \textbf{1}_{p}} or directly the vector
 #'   \eqn{\bm{\beta}^{(0)}}. The \code{"sigma"} tag must be a number 
 #'   \eqn{\sigma^{(0)}}.
 #' @param n.samples the number of MCMC iterations after \code{n.burnin}.
@@ -83,7 +80,8 @@
 #' 
 #' @author Jorge Castillo-Mateo
 #' 
-#' @seealso \code{\link{confint.iidm}}, \code{\link{predict.iidm}}
+#' @seealso \code{\link{confint.iidm}}, \code{\link{predict.iidm}}, 
+#'   \code{\link{summary.iidm}}
 #' 
 #' @references 
 #' Kozumi H, Kobayashi G (2011). 
@@ -155,32 +153,32 @@ iidm <- function(
   N <- length(y)
   if (stats::is.empty.model(mt)) {
     x <- NULL
-    k <- 0L
+    p <- 0L
     z <- list(p.params.samples = numeric(), 
               method = method)
   } else {
     x <- stats::model.matrix(mt, mf)
-    k <- ncol(x)
+    p <- ncol(x)
     if (is.list(priors$beta)) {
       if (!all(c("M", "P") %in% names(priors$beta)))
         stop("'priors$beta' should have the valid tags 'M' and 'P'")
-      if (length(priors$beta$M) != k)
+      if (length(priors$beta$M) != p)
         stop("'priors$beta$M' should have 'length' equal to the number of regression coefficients")
-      if (!all(dim(priors$beta$P) == k))
+      if (!all(dim(priors$beta$P) == p))
         stop("'priors$beta$P' should have both 'dim' equal to the number of regression coefficients")
     } else {
       if (length(priors$beta) != 2)
         stop("'priors$beta' should have 'length' equal to 2")
-      priors$beta <- list("M" = rep(priors$beta[1], k),
-                          "P" = priors$beta[2] * diag(k))
+      priors$beta <- list("M" = rep(priors$beta[1], p),
+                          "P" = priors$beta[2] * diag(p))
     }
-    if (!(length(starting$beta) %in% c(1, k)))
+    if (!(length(starting$beta) %in% c(1, p)))
       stop("'starting$beta' should have 'length' equal to 1 or to the number of regression coefficients")
-    if ((length(starting$beta) == 1) && (k != 1))
-      starting$beta <- rep(starting$beta, k)
+    if ((length(starting$beta) == 1) && (p != 1))
+      starting$beta <- rep(starting$beta, p)
     if (length(starting$sigma) != 1)
       stop("'starting$sigma' should have 'length' equal to 1")
-    keep <- matrix(nrow = n.samples / n.thin, ncol = k + 1)
+    keep <- matrix(nrow = n.samples / n.thin, ncol = p + 1)
     if (!verbose) 
       n.report <- n.samples + 1
     
@@ -196,7 +194,7 @@ iidm <- function(
         starting$beta,
         1 / starting$sigma^2,
         N,
-        k,
+        p,
         keep,
         n.samples,
         n.thin,
@@ -205,7 +203,7 @@ iidm <- function(
       )
       time <- Sys.time() - time
       
-      params[, k + 1] <- 1 / sqrt(params[, k + 1])
+      params[, p + 1] <- 1 / sqrt(params[, p + 1])
       
     } else {
       time <- Sys.time()
@@ -220,7 +218,7 @@ iidm <- function(
         starting$beta,
         1 / starting$sigma,
         N,
-        k,
+        p,
         keep,
         n.samples,
         n.thin,
@@ -229,12 +227,12 @@ iidm <- function(
       )
       time <- Sys.time() - time
       
-      params[, k + 1] <- 1 / params[, k + 1]
+      params[, p + 1] <- 1 / params[, p + 1]
       
     }
     
     if (is.null(colnames(x))) {
-      colnames(params) <- c(paste0("V", 1:k), "sigma")
+      colnames(params) <- c(paste0("V", 1:p), "sigma")
     } else {
       colnames(params) <- c(colnames(x), "sigma")
     }
@@ -257,7 +255,7 @@ iidm <- function(
   
   if (!method.mean)
     z$quantile <- quantile
-  z$rank <- k
+  z$rank <- p
   z$xlevels <- stats::.getXlevels(mt, mf)
   z$call <- cl
   z$terms <- mt

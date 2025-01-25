@@ -172,7 +172,7 @@ arma::vec rig(
 }
 
 // [[Rcpp::export]]
-arma::vec ral(
+arma::vec ralRcpp(
   const arma::vec sigma,
   const double tau) {
   
@@ -240,7 +240,7 @@ arma::mat iidMeanRcpp(
   arma::vec beta,    // initial values
   double prec,
   const int N,       // constants
-  const int k,
+  const int p,
   arma::mat keep,    // replicates
   const int nSims,   // MCMC numbers
   const int nThin,
@@ -259,7 +259,7 @@ arma::mat iidMeanRcpp(
   const arma::vec PM = P * M;
   
   // full posterior Variance of beta
-  arma::mat V(k, k);
+  arma::mat V(p, p);
   // full posterior parameters A B of prec
   double A = N / 2 + ga;
   double B;
@@ -274,7 +274,7 @@ arma::mat iidMeanRcpp(
     // beta
     V    = arma::inv_sympd(prec * XtX + P);
     beta = V * (prec * XtY + PM);
-    beta += arma::chol(V, "lower") * arma::randn(k);
+    beta += arma::chol(V, "lower") * arma::randn(p);
     
     // prec
     e = Y - X * beta;
@@ -283,12 +283,12 @@ arma::mat iidMeanRcpp(
     
     // keep
     if ((b > 0) && (b % nThin == 0)) {
-      keep(b / nThin - 1, arma::span(0, k - 1)) = beta.t();
-      keep(b / nThin - 1, k) = prec;
-      //keep(b / nThin - 1, arma::span(k + 1, k + N)) = (X * beta).t();
+      keep(b / nThin - 1, arma::span(0, p - 1)) = beta.t();
+      keep(b / nThin - 1, p) = prec;
+      //keep(b / nThin - 1, arma::span(p + 1, p + N)) = (X * beta).t();
         //(X * beta + arma::randn(N) / sqrt(prec)).t();
-      //keep(b / nThin - 1, arma::span(k + N + 1, k + 2 * N)) = 
-      //  Y.t() - keep(b / nThin - 1, arma::span(k + 1, k + N));
+      //keep(b / nThin - 1, arma::span(p + N + 1, p + 2 * N)) = 
+      //  Y.t() - keep(b / nThin - 1, arma::span(p + 1, p + N));
     }
   }
   
@@ -308,7 +308,7 @@ arma::mat iidQuantileRcpp(
   arma::vec beta,    // initial values
   double prec,
   const int N,       // constants
-  const int k,
+  const int p,
   arma::mat keep,    // replicates
   const int nSims,   // MCMC numbers
   const int nThin,
@@ -328,13 +328,13 @@ arma::mat iidQuantileRcpp(
   // aux
   arma::vec e = Y - X * beta - c1 * xi;
   arma::vec c2xiInv(N);
-  arma::vec Xaux(k);
+  arma::vec Xaux(p);
   
   // prior Mean M and Precision P of beta, PM = P * M
   const arma::vec PM = P * M;
   
   // full posterior Variance of beta
-  arma::mat V(k, k);
+  arma::mat V(p, p);
   // full posterior parameters A B of prec
   double A = 3 * N / 2 + ga;
   double B;
@@ -362,7 +362,7 @@ arma::mat iidQuantileRcpp(
       beta += Xaux * e(i);
     }
     V    = arma::inv_sympd(V);
-    beta = V * beta + arma::chol(V, "lower") * arma::randn(k);
+    beta = V * beta + arma::chol(V, "lower") * arma::randn(p);
     e -= X * beta;
     
     // prec
@@ -371,12 +371,12 @@ arma::mat iidQuantileRcpp(
     
     // keep
     if ((b > 0) && (b % nThin == 0)) {
-      keep(b / nThin - 1, arma::span(0, k - 1)) = beta.t();
-      keep(b / nThin - 1, k) = prec;
-      //keep(b / nThin - 1, arma::span(k + 1, k + N)) = (X * beta).t();
-        //(X * beta + ral(N, c1, c2, 1 / prec)).t();
-      //keep(b / nThin - 1, arma::span(k + N + 1, k + 2 * N)) = 
-      //  Y.t() - keep(b / nThin - 1, arma::span(k + 1, k + N));
+      keep(b / nThin - 1, arma::span(0, p - 1)) = beta.t();
+      keep(b / nThin - 1, p) = prec;
+      //keep(b / nThin - 1, arma::span(p + 1, p + N)) = (X * beta).t();
+        //(X * beta + ralRcpp(N, c1, c2, 1 / prec)).t();
+      //keep(b / nThin - 1, arma::span(p + N + 1, p + 2 * N)) = 
+      //  Y.t() - keep(b / nThin - 1, arma::span(p + 1, p + N));
     }
   }
   
@@ -386,7 +386,7 @@ arma::mat iidQuantileRcpp(
 // [[Rcpp::export]]
 arma::mat arMeanRcpp(
     const arma::vec Y, const arma::mat X, 
-    const int N, const int k,
+    const int N, const int p,
     arma::vec beta, double rho, double prec, 
     arma::mat keep,
     const int nSims, const int nThin, const int nBurnin, const int nReport) {
@@ -405,11 +405,11 @@ arma::mat arMeanRcpp(
   arma::vec Z(N);
   
   // prior Mean M and Precision P of beta, PM = P * M
-  const arma::mat P  = nb * arma::mat(k, k, arma::fill::eye);
-  const arma::vec PM = P  * arma::vec(k, arma::fill::value(na));
+  const arma::mat P  = nb * arma::mat(p, p, arma::fill::eye);
+  const arma::vec PM = P  * arma::vec(p, arma::fill::value(na));
   
   // full posterior Variance of beta
-  arma::mat V(k, k);
+  arma::mat V(p, p);
   // full posterior parameters A B of prec
   double A = N / 2 + ga;
   double B;
@@ -424,7 +424,7 @@ arma::mat arMeanRcpp(
     // beta
     V    = arma::inv_sympd(prec * XtX + P);
     beta = V * (prec * XtY + PM);
-    beta += arma::chol(V, "lower") * arma::randn(k);
+    beta += arma::chol(V, "lower") * arma::randn(p);
     
     // rho
     
@@ -436,9 +436,9 @@ arma::mat arMeanRcpp(
     
     // keep
     if ((b > 0) && (b % nThin == 0)) {
-      keep(b / nThin - 1, arma::span(0, k - 1)) = beta.t();
-      keep(b / nThin - 1, k) = prec;
-      keep(b / nThin - 1, k + 1) = rho;
+      keep(b / nThin - 1, arma::span(0, p - 1)) = beta.t();
+      keep(b / nThin - 1, p) = prec;
+      keep(b / nThin - 1, p + 1) = rho;
     }
   }
   
@@ -450,7 +450,8 @@ arma::mat arMeanRcpp(
 arma::mat spMeanRcpp(
     const arma::vec Y,    // data
     const arma::mat X,
-    const arma::mat V,  
+    const arma::mat U,
+    const arma::mat V,
     const arma::mat dist, 
     const arma::vec M,    // prior values
     const arma::mat P,
@@ -461,12 +462,14 @@ arma::mat spMeanRcpp(
     const double na,    
     const double nb,    
     arma::vec beta,       // initial values
-    arma::mat betas,    
+    arma::mat gamma,
+    arma::mat alpha,    
     double prec,
     arma::mat hp,       
     const int N,          // constants
-    const int n,        
-    const int k,
+    const int n,
+    const int p,
+    const int q,
     const int r,        
     const arma::uvec s,  
     arma::mat keep,       // replicates
@@ -486,7 +489,7 @@ arma::mat spMeanRcpp(
   arma::vec e  = Y - Xb;
   for (int m = 0; m < r; ++m) {
     ind = m;
-    e -= V.col(m) % betas(s, ind);
+    e -= V.col(m) % alpha(s, ind);
   }
   
   // aux GP
@@ -521,19 +524,19 @@ arma::mat spMeanRcpp(
   
   arma::vec vn(n);
   double vtRv, vtRv_aux;
-  double alpha = 0;
+  double ALPHA = 0;
   
   // prior Mean M and Precision P of beta, PM = P * M
   const arma::vec PM = P * M;
   
   // full posterior Variance of beta
-  arma::mat Vk(k, k);
-  // full posterior Variance of betas
+  arma::mat Vp(p, p);
+  // full posterior Variance of alpha
   arma::mat Vn(n, n);
   // full posterior parameters chi delta of mu
   //double chi;
   //double delta;
-  // full posterior parameters A B of prec, and C - of prec (betas)
+  // full posterior parameters A B of prec, and C - of prec (alpha)
   double A = N / 2 + ga;
   double B;
   double C = n / 2 + ga;
@@ -547,33 +550,46 @@ arma::mat spMeanRcpp(
     
     // beta
     e += Xb;
-    Vk   = arma::inv_sympd(prec * XtX + P);
-    beta = Vk * (prec * Xt * e + PM);
-    beta += arma::chol(Vk, "lower") * arma::randn(k);
+    Vp   = arma::inv_sympd(prec * XtX + P);
+    beta = Vp * (prec * Xt * e + PM);
+    beta += arma::chol(Vp, "lower") * arma::randn(p);
     Xb = X * beta;
     e -= Xb;
     
-    // betas m = 1,...,r
+    // gamma t = 0,1,...,T-1,T
+    //if (q > 0) {
+    // t = 0
+    
+    // t = 1,...,T-1
+    //for (int t = 1; t < T; ++t) {
+      
+    //}
+    // t = T
+    
+    //}
+    
+    // alpha m = 1,...,r
+    if (r > 0) {
     for (int m = 0; m < r; ++m) {
       ind = m;
-      e += V.col(m) % betas(s, ind);
+      e += V.col(m) % alpha(s, ind);
       Vn = hp(1, m) * R.slice(m);
-      betas.col(m) = Vn * onen * hp(0, m);
+      alpha.col(m) = Vn * onen * hp(0, m);
       count1 = 0;
       for (int i = 0; i < n; ++i) {
         count0 = count1;
         count1 += Nn;
         Vn(i, i)    += prec * arma::accu(V(arma::span(count0, count1 - 1), m) % V(arma::span(count0, count1 - 1), m));
-        betas(i, m) += prec * arma::accu(e(arma::span(count0, count1 - 1))    % V(arma::span(count0, count1 - 1), m));
+        alpha(i, m) += prec * arma::accu(e(arma::span(count0, count1 - 1))    % V(arma::span(count0, count1 - 1), m));
       }
       Vn = arma::inv_sympd(Vn);
-      betas.col(m) = Vn * betas.col(m) + arma::chol(Vn, "lower") * arma::randn(n);
-      betas.col(m) -= Vn * onen * (arma::accu(betas.col(m)) / arma::accu(Vn));
-      e -= V.col(m) % betas(s, ind);
+      alpha.col(m) = Vn * alpha.col(m) + arma::chol(Vn, "lower") * arma::randn(n);
+      alpha.col(m) -= Vn * onen * (arma::accu(alpha.col(m)) / arma::accu(Vn));
+      e -= V.col(m) % alpha(s, ind);
       
       // mu 
       //delta = 1 / (oneRone(m) * hp(1, m) + nb);
-      //chi   = arma::as_scalar(onen.t() * R.slice(m) * betas.col(m)) * hp(1, m) + na * nb;
+      //chi   = arma::as_scalar(onen.t() * R.slice(m) * alpha.col(m)) * hp(1, m) + na * nb;
       //hp(0, m) = R::rnorm(delta * chi, sqrt(delta));
       
       // decay
@@ -581,15 +597,15 @@ arma::mat spMeanRcpp(
       decay_aux   = exp(ldecay_aux);
       R_aux       = arma::inv_sympd(exp(- decay_aux * dist));
       Rlogdet_aux = arma::log_det_sympd(R_aux);
-      vn       = betas.col(m) - hp(0, m);
+      vn       = alpha.col(m) - hp(0, m);
       vtRv_aux = arma::as_scalar(vn.t() * R_aux * vn);
       vtRv     = arma::as_scalar(vn.t() * R.slice(m) * vn);
-      alpha = 
+      ALPHA = 
         (Rlogdet_aux - hp(1, m) * vtRv_aux) / 2 + 
         da * ldecay_aux - db * decay_aux - 
         ((Rlogdet(m) - hp(1, m) * vtRv) / 2 +
         da * ldecay(m) - db * hp(2, m));
-      if (log(R::runif(0, 1)) < alpha) {
+      if (log(R::runif(0, 1)) < ALPHA) {
         ++accept(m);
         hp(2, m) = decay_aux;
         ldecay(m) = ldecay_aux;
@@ -602,6 +618,7 @@ arma::mat spMeanRcpp(
       // prec
       hp(1, m) = R::rgamma(C, 
         1 / (vtRv / 2 + gb));
+    }
     }
   
     // tune sd of the proposal for decay
@@ -626,11 +643,13 @@ arma::mat spMeanRcpp(
     
     // keep
     if ((b > 0) && (b % nThin == 0)) {
-      keep(b / nThin - 1, arma::span(0, k - 1)) = beta.t();
-      keep(b / nThin - 1, k) = prec;
+      keep(b / nThin - 1, arma::span(0, p - 1)) = beta.t();
+      keep(b / nThin - 1, p) = prec;
+      if (r > 0) {
       for (int m = 0; m < r; ++m) {
-        keep(b / nThin - 1, arma::span(k + 1 + m * (n + 3), k + n + m * (n + 3))) = betas.col(m).t();
-        keep(b / nThin - 1, arma::span(k + 1 + n + m * (n + 3), k + (m + 1) * (n + 3))) = hp.col(m).t();
+        keep(b / nThin - 1, arma::span(p + 1 + m * (n + 3), p + n + m * (n + 3))) = alpha.col(m).t();
+        keep(b / nThin - 1, arma::span(p + 1 + n + m * (n + 3), p + (m + 1) * (n + 3))) = hp.col(m).t();
+      }
       }
     }
   }
@@ -655,12 +674,12 @@ arma::mat spQuantileRcpp(
     const double na,    
     const double nb,    
     arma::vec beta,       // initial values
-    arma::mat betas,    
+    arma::mat alpha,    
     double prec,
     arma::mat hp,       
     const int N,          // constants
     const int n,        
-    const int k,
+    const int p,
     const int r,        
     const arma::uvec s,  
     arma::mat keep,       // replicates
@@ -685,11 +704,11 @@ arma::mat spQuantileRcpp(
   arma::vec e  = Y - Xb - c1 * xi;
   for (int m = 0; m < r; ++m) {
     ind = m;
-    e -= V.col(m) % betas(s, ind);
+    e -= V.col(m) % alpha(s, ind);
   }
   
   arma::vec c2xiInv(N);
-  arma::vec Xaux(k);
+  arma::vec Xaux(p);
   
   // aux GP
   arma::vec onen(n, arma::fill::ones);
@@ -723,19 +742,19 @@ arma::mat spQuantileRcpp(
   
   arma::vec vn(n);
   double vtRv, vtRv_aux;
-  double alpha = 0;
+  double ALPHA = 0;
   
   // prior Mean M and Precision P of beta, PM = P * M
   const arma::vec PM = P * M;
   
   // full posterior Variance of beta
-  arma::mat Vk(k, k);
-  // full posterior Variance of betas
+  arma::mat Vp(p, p);
+  // full posterior Variance of alpha
   arma::mat Vn(n, n);
   // full posterior parameters chi delta of mu
   //double chi;
   //double delta;
-  // full posterior parameters A B of prec, and C - of prec (betas)
+  // full posterior parameters A B of prec, and C - of prec (alpha)
   double A = 3 * N / 2 + ga;
   double B;
   double C = n / 2 + ga;
@@ -755,24 +774,24 @@ arma::mat spQuantileRcpp(
     
     // beta
     e += Xb;
-    Vk   = P;
+    Vp   = P;
     beta = PM;
     for (int i = 0; i < N; ++i) {
       Xaux = prec * c2xiInv(i) * X.row(i).t();
-      Vk   += Xaux * X.row(i);
+      Vp   += Xaux * X.row(i);
       beta += Xaux * e(i);
     }
-    Vk   = arma::inv_sympd(Vk);
-    beta = Vk * beta + arma::chol(Vk, "lower") * arma::randn(k);
+    Vp   = arma::inv_sympd(Vp);
+    beta = Vp * beta + arma::chol(Vp, "lower") * arma::randn(p);
     Xb = X * beta;
     e -= Xb;
     
-    // betas m = 1,...,r
+    // alpha m = 1,...,r
     for (int m = 0; m < r; ++m) {
       ind = m;
-      e += V.col(m) % betas(s, ind);
+      e += V.col(m) % alpha(s, ind);
       Vn = hp(1, m) * R.slice(m);
-      betas.col(m) = Vn * onen * hp(0, m);
+      alpha.col(m) = Vn * onen * hp(0, m);
       count1 = 0;
       for (int i = 0; i < n; ++i) {
         count0 = count1;
@@ -780,18 +799,18 @@ arma::mat spQuantileRcpp(
         Vn(i, i)    += prec * arma::accu(V(arma::span(count0, count1 - 1), m) % 
                                          V(arma::span(count0, count1 - 1), m) %
                                    c2xiInv(arma::span(count0, count1 - 1)));
-        betas(i, m) += prec * arma::accu(e(arma::span(count0, count1 - 1))    % 
+        alpha(i, m) += prec * arma::accu(e(arma::span(count0, count1 - 1))    % 
                                          V(arma::span(count0, count1 - 1), m) %
                                    c2xiInv(arma::span(count0, count1 - 1)));
       }
       Vn = arma::inv_sympd(Vn);
-      betas.col(m) = Vn * betas.col(m) + arma::chol(Vn, "lower") * arma::randn(n);
-      betas.col(m) -= Vn * onen * (arma::accu(betas.col(m)) / arma::accu(Vn));
-      e -= V.col(m) % betas(s, ind);
+      alpha.col(m) = Vn * alpha.col(m) + arma::chol(Vn, "lower") * arma::randn(n);
+      alpha.col(m) -= Vn * onen * (arma::accu(alpha.col(m)) / arma::accu(Vn));
+      e -= V.col(m) % alpha(s, ind);
       
       // mu 
       //delta = 1 / (oneRone(m) * hp(1, m) + nb);
-      //chi   = arma::as_scalar(onen.t() * R.slice(m) * betas.col(m)) * hp(1, m) + na * nb;
+      //chi   = arma::as_scalar(onen.t() * R.slice(m) * alpha.col(m)) * hp(1, m) + na * nb;
       //hp(0, m) = R::rnorm(delta * chi, sqrt(delta));
       
       // decay
@@ -799,15 +818,15 @@ arma::mat spQuantileRcpp(
       decay_aux   = exp(ldecay_aux);
       R_aux       = arma::inv_sympd(exp(- decay_aux * dist));
       Rlogdet_aux = arma::log_det_sympd(R_aux);
-      vn       = betas.col(m) - hp(0, m);
+      vn       = alpha.col(m) - hp(0, m);
       vtRv_aux = arma::as_scalar(vn.t() * R_aux * vn);
       vtRv     = arma::as_scalar(vn.t() * R.slice(m) * vn);
-      alpha = 
+      ALPHA = 
         (Rlogdet_aux - hp(1, m) * vtRv_aux) / 2 + 
         da * ldecay_aux - db * decay_aux - 
         ((Rlogdet(m) - hp(1, m) * vtRv) / 2 +
         da * ldecay(m) - db * hp(2, m));
-      if (log(R::runif(0, 1)) < alpha) {
+      if (log(R::runif(0, 1)) < ALPHA) {
         ++accept(m);
         hp(2, m) = decay_aux;
         ldecay(m) = ldecay_aux;
@@ -844,11 +863,11 @@ arma::mat spQuantileRcpp(
     
     // keep
     if ((b > 0) && (b % nThin == 0)) {
-      keep(b / nThin - 1, arma::span(0, k - 1)) = beta.t();
-      keep(b / nThin - 1, k) = prec;
+      keep(b / nThin - 1, arma::span(0, p - 1)) = beta.t();
+      keep(b / nThin - 1, p) = prec;
       for (int m = 0; m < r; ++m) {
-        keep(b / nThin - 1, arma::span(k + 1 + m * (n + 3), k + n + m * (n + 3))) = betas.col(m).t();
-        keep(b / nThin - 1, arma::span(k + 1 + n + m * (n + 3), k + (m + 1) * (n + 3))) = hp.col(m).t();
+        keep(b / nThin - 1, arma::span(p + 1 + m * (n + 3), p + n + m * (n + 3))) = alpha.col(m).t();
+        keep(b / nThin - 1, arma::span(p + 1 + n + m * (n + 3), p + (m + 1) * (n + 3))) = hp.col(m).t();
       }
     }
   }

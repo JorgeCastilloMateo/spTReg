@@ -48,8 +48,8 @@ the \code{\link[stats]{model.frame}} documentation.)}
 \item{priors}{a list with each tag corresponding to a parameter name. Valid 
 tags are \code{"beta"} and \code{"sigma"}. The \code{"beta"} tag can be 
 either the vector \eqn{(a_{\bm{\beta}}, b_{\bm{\beta}})} such that 
-\eqn{\bm{\mu}_{\bm{\beta}} = a_{\bm{\beta}} \mathbf{1}_{k}} and 
-\eqn{\bm{\Sigma}_{\bm{\beta}}^{-1} = b_{\bm{\beta}} \mathbf{I}_{k}} or 
+\eqn{\bm{\mu}_{\bm{\beta}} = a_{\bm{\beta}} \mathbf{1}_{p}} and 
+\eqn{\bm{\Sigma}_{\bm{\beta}}^{-1} = b_{\bm{\beta}} \mathbf{I}_{p}} or 
 another list with valid tags \code{"M"} and \code{"P"} corresponding to 
 the whole mean vector \eqn{\bm{\mu}_{\bm{\beta}}} and the whole precision 
 matrix \eqn{\bm{\Sigma}_{\bm{\beta}}^{-1}}, respectively. The 
@@ -59,7 +59,7 @@ matrix \eqn{\bm{\Sigma}_{\bm{\beta}}^{-1}}, respectively. The
 \item{starting}{a list with each tag corresponding to a parameter name. Valid 
 tags are \code{"beta"} and \code{"sigma"}. The \code{"beta"} tag can be 
 either a number \eqn{\beta^{(0)}} such that 
-\eqn{\bm{\beta}^{(0)} = \beta^{(0)} \textbf{1}_{k}} or directly the vector
+\eqn{\bm{\beta}^{(0)} = \beta^{(0)} \textbf{1}_{p}} or directly the vector
 \eqn{\bm{\beta}^{(0)}}. The \code{"sigma"} tag must be a number 
 \eqn{\sigma^{(0)}}.}
 
@@ -105,8 +105,8 @@ This function is used to draw MCMC samples using the Gibbs
   errors.
 }
 \details{
-The function \code{iidm} can fit three types of model, depending on whether
-  the mean or the quantile is of interest, or binary data is of interest.
+The function \code{iidm} can fit two types of model, depending on whether
+  the mean or the quantile is of interest.
   
   General model:
   \deqn{Y_{i} = \mathbf{x}_{i} \bm{\beta} + \epsilon_{i}, \qquad i=1,\ldots,n,}
@@ -115,10 +115,8 @@ The function \code{iidm} can fit three types of model, depending on whether
   \eqn{\tau}-th quantile.
   
   Priors:
-  \deqn{\bm{\beta} \sim N_{k}(\bm{\mu}_{\bm{\beta}}, \bm{\Sigma}_{\bm{\beta}})}
+  \deqn{\bm{\beta} \sim N_{p}(\bm{\mu}_{\bm{\beta}}, \bm{\Sigma}_{\bm{\beta}})}
   \deqn{\sigma^{2} \text{ (mean)}, \sigma \text{ (quantile)} \sim IG(a_{\sigma}, b_{\sigma})}
-  
-  Models for binary data are not currently available.
 }
 \examples{
 ## Annette Dobson (1990) "An Introduction to Generalized Linear Models".
@@ -145,7 +143,8 @@ Bayesian quantile regression.
 \doi{10.1016/S0167-7152(01)00124-9}
 }
 \seealso{
-\code{\link{confint.iidm}}, \code{\link{predict.iidm}}
+\code{\link{confint.iidm}}, \code{\link{predict.iidm}}, 
+  \code{\link{summary.iidm}}
 }
 \author{
 Jorge Castillo-Mateo

@@ -6,14 +6,20 @@
 \usage{
 spTm(
   formula,
+  u,
   v,
   data,
   subset,
   method = c("mean", "quantile"),
   quantile = 0.5,
   coords,
-  priors = list(beta = c(0, 1/100), sigma = c(2, 1), decay = c(2, 100), mu = c(0, 1/100)),
-  starting = list(beta = 0.01, sigma = 1, betas = 0, hp = c(0, 1, 3/100)),
+  priors = list(beta = c(0, 1/100), sigma = c(0.1, 0.1), rho = c(0, 1/100), hpGamma =
+    list(sigma = c(0.1, 0.1), rho = c(0, 1/100)), hpAlpha = list(prec0 = 1/100, sigma =
+    c(0.1, 0.1), phi = c(2, 100)), hpSigma = list(mu = 0, sigma = c(0.1, 0.1), phi = c(2,
+    100)), hpRho = list(mu = 0, sigma = c(0.1, 0.1), phi = c(2, 100))),
+  starting = list(beta = 0.01, sigma = 1, rho = 0, gamma = 0, alpha = 0, hpGamma =
+    c(sigma = 1, phi = 3/100), hpAlpha = c(sigma = 1, phi = 3/100), hpSigma = c(mu = 0,
+    sigma = 1, phi = 3/100), hpRho = c(mu = 0, sigma = 1, phi = 3/100)),
   n.samples = 1000,
   n.thin = 1,
   n.burnin = 1000,
@@ -30,8 +36,10 @@ spTm(
 that can be coerced to that class): a symbolic description of the model to
 be fitted. The details of model specification are given under ‘Details’.}
 
-\item{v}{(in addition to \code{formula}) a \eqn{N \times q} matrix of regression variables accompanying a 
-spatially varying coefficient.}
+\item{u, v}{(in addition to \code{formula}) \eqn{N \times q} and 
+\eqn{N \times r} matrices of regression variables accompanying a 
+time-varying coefficient and a spatially-varying coefficient, 
+respectively.}
 
 \item{data}{a data frame object with named columns giving the data to be 
 fit; any explanatory variable necessary for modeling any of the 
@@ -100,6 +108,12 @@ This function is used to draw MCMC samples using the
   models.
 
 Function currently working but under development.
+  
+  Model:
+  
+  \deqn{\mathbf{Y}_{t\ell} = \mathbf{O}_{t\ell} + \mathbf{P} (\mathbf{Y}_{t,\ell-1} - \mathbf{O}_{t,\ell-1}) + \bm{\epsilon}_{t\ell},}
+  \deqn{\mathbf{O}_{t\ell} = \mathbf{X}_{t\ell} \bm{\beta} + \mathbf{U}_{t\ell} \bm{\gamma}_{t} + \sum_{m=1}^{r} \mathbf{V}_{t\ell,m} \bm{\alpha}_{m},}
+  \deqn{\bm{\epsilon}_{t\ell} \sim \text{i.i.d. } N_{n}(\mathbf{0}_{n}, \bm{\Sigma}).}
 }
 \references{
 Castillo-Mateo J, Lafuente M, Asín J, Cebrián AC, Gelfand AE, Abaurrea J (2022).

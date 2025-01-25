@@ -54,6 +54,7 @@ predict.iidm <- function(
   
   noData <- (missing(newdata) || is.null(newdata))
   if (noData) {
+    class(object) <- "lm"
     mm <- X <- model.matrix(object)
     mmDone <- TRUE
     offset <- object$offset
@@ -91,7 +92,7 @@ predict.iidm <- function(
     if (object$method == "mean") {
       predictor <- predictor + stats::rnorm(B * n, sd = sigma)
     } else if (object$method == "quantile") {
-      predictor <- predictor + c(ral(rep.int(sigma, n), object$quantile))
+      predictor <- predictor + c(ralRcpp(rep.int(sigma, n), object$quantile))
     } else {
       stop("'method' in 'object' must be 'mean' or 'quantile'")
     }

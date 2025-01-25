@@ -2,7 +2,7 @@
 #' @description This function is used to obtain validation metrics using MCMC
 #'   samples.
 #'   
-#' @description
+#' @details
 #'   Function currently not working.
 #'   
 #' @param model Object of class "spTm".

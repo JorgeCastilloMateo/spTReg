@@ -6,8 +6,8 @@
 #' @description
 #'   Function currently not working.
 #'  
-#' @param object an object of class \code{"iidm"}, usually, a result of a call 
-#'   to \code{\link{iidm}}. 
+#' @param object an object of class \code{"iidm"}, usually the result of a call
+#'   to \code{\link{iidm}}.
 #' @param ... further arguments passed to or from other methods.
 #' @return The function \code{summary.iidm} computes and returns a list of 
 #'   summary statistics of the fitted i.i.d. linear model given in 

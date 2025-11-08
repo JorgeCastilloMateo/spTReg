@@ -7,7 +7,7 @@
 \method{summary}{iidm}(object, ...)
 }
 \arguments{
-\item{object}{an object of class \code{"iidm"}, usually, a result of a call 
+\item{object}{an object of class \code{"iidm"}, usually the result of a call
 to \code{\link{iidm}}.}
 
 \item{...}{further arguments passed to or from other methods.}

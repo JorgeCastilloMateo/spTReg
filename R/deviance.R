@@ -42,8 +42,13 @@ deviance.iidm <- function(
   
   value <- match.arg(value)
   
-  y <- model.response(model.frame(object))
   pred <- predict(object, type = "signal")
+  y <- model.response(model.frame(object))
+  
+  if (anyNA(y)) {
+    pred <- pred[,!is.na(y)]
+    y <- y[!is.na(y)]
+  }
   
   if (object$method == "mean") {
     if (value == "mean") {

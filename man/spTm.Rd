@@ -10,6 +10,7 @@ spTm(
   v,
   data,
   subset,
+  na.action,
   method = c("mean", "quantile"),
   quantile = 0.5,
   coords,
@@ -23,8 +24,10 @@ spTm(
   n.samples = 1000,
   n.thin = 1,
   n.burnin = 1000,
-  verbose = TRUE,
+  verbose = FALSE,
   n.report = 100,
+  parallel = FALSE,
+  n.threads = 0,
   model = TRUE,
   x = FALSE,
   y = FALSE,
@@ -114,6 +117,13 @@ Function currently working but under development.
   \deqn{\mathbf{Y}_{t\ell} = \mathbf{O}_{t\ell} + \mathbf{P} (\mathbf{Y}_{t,\ell-1} - \mathbf{O}_{t,\ell-1}) + \bm{\epsilon}_{t\ell},}
   \deqn{\mathbf{O}_{t\ell} = \mathbf{X}_{t\ell} \bm{\beta} + \mathbf{U}_{t\ell} \bm{\gamma}_{t} + \sum_{m=1}^{r} \mathbf{V}_{t\ell,m} \bm{\alpha}_{m},}
   \deqn{\bm{\epsilon}_{t\ell} \sim \text{i.i.d. } N_{n}(\mathbf{0}_{n}, \bm{\Sigma}).}
+
+  Parallel execution is only available if the package was compiled with 
+  \code{OpenMP} support. This mode samples the exponential latent variables 
+  for quantile regression in parallel, but the current implementation does 
+  not improve computational times. Parallel and sequential execution are
+  both reproducible with \code{\link{set.seed}}, and the numerical results 
+  between the two modes should be the same.
 }
 \references{
 Castillo-Mateo J, Lafuente M, Asín J, Cebrián AC, Gelfand AE, Abaurrea J (2022).

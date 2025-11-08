@@ -8,6 +8,7 @@ iidm(
   formula,
   data,
   subset,
+  na.action,
   method = c("mean", "quantile"),
   quantile = 0.5,
   priors = list(beta = c(0, 1/100), sigma = c(0.1, 0.1)),
@@ -15,8 +16,10 @@ iidm(
   n.samples = 1000,
   n.thin = 1,
   n.burnin = 1000,
-  verbose = TRUE,
+  verbose = FALSE,
   n.report = 100,
+  parallel = FALSE,
+  n.threads = 0,
   model = TRUE,
   x = FALSE,
   y = FALSE,
@@ -37,7 +40,11 @@ in the model. If not found in data, the variables are taken from
 \item{subset}{an optional vector specifying a subset of observations to be 
 used in the fitting process. (See additional details about how this 
 argument interacts with data-dependent bases in the `Details' section of 
-the \code{\link[stats]{model.frame}} documentation.)}
+the \code{\link[stats]{model.frame}} documentation.}
+
+\item{na.action}{a function indicating how to handle \code{NA}s; 
+\code{na.omit} deletes cases, \code{na.pass} keeps and imputes them within 
+the MCMC (similar to \code{NULL}). See \code{\link[base]{options}}.}
 
 \item{method}{the method to be used for fitting, \code{"mean"} or 
 \code{"quantile"} regression (default=\code{"mean"}).}
@@ -60,7 +67,7 @@ matrix \eqn{\bm{\Sigma}_{\bm{\beta}}^{-1}}, respectively. The
 tags are \code{"beta"} and \code{"sigma"}. The \code{"beta"} tag can be 
 either a number \eqn{\beta^{(0)}} such that 
 \eqn{\bm{\beta}^{(0)} = \beta^{(0)} \textbf{1}_{p}} or directly the vector
-\eqn{\bm{\beta}^{(0)}}. The \code{"sigma"} tag must be a number 
+\eqn{\bm{\beta}^{(0)}}. The \code{"sigma"} tag must be a positive number 
 \eqn{\sigma^{(0)}}.}
 
 \item{n.samples}{the number of MCMC iterations after \code{n.burnin}.}
@@ -76,7 +83,16 @@ screen.}
 
 \item{n.report}{the interval to report MCMC progress.}
 
-\item{model, x, y}{logicals. If \code{TRUE} the corresponding components of 
+\item{parallel}{logical; if method="quantile", whether to run the 
+computation in parallel using \code{OpenMP} (default = \code{FALSE}).
+See `Details'.}
+
+\item{n.threads}{integer; number of threads to use when 
+\code{parallel = TRUE}.  
+The default \code{0} uses all available physical cores.  
+This argument is ignored when \code{parallel = FALSE}.}
+
+\item{model, x, y}{logicals; if \code{TRUE} the corresponding components of 
 the fit (the model frame, the model matrix, the response) are returned.}
 
 \item{...}{currently no additional arguments.}
@@ -85,19 +101,23 @@ the fit (the model frame, the model matrix, the response) are returned.}
 An object of class \code{iidm}, which is a list comprising:
   \item{p.params.samples}{a \code{coda} object of posterior samples for the 
     model parameters, that is \eqn{\bm{\beta}} and \eqn{\sigma}.}
+  \item{Y.missing.samples}{a \code{coda} object of posterior samples for the 
+    imputed missing response values.}
   \item{mcmc}{a list with information of the MCMC chain, that is 
     \code{n.samples}, \code{n.thin}, \code{n.burnin}, and CPU \code{time} 
     used.}
   \item{method}{the method used.}
   \item{quantile}{if method="quantile", the quantile level used.}
   \item{rank}{the numeric rank of the fitted linear model.}
-  \item{xlevels}{(only where relevant) a record of the levels of the factors
+  \item{xlevels}{(where relevant) a record of the levels of the factors
     used in fitting.}
   \item{call}{the matched call.}
   \item{terms}{the \code{\link[stats]{terms}} object used.}
   \item{y}{if requested, the response used.}
   \item{x}{if requested, the model matrix used.}
   \item{model}{if requested (the default), the model frame used.}
+  \item{na.action}{(where relevant) information returned by 
+    \code{\link[stats]{model.frame}} on the special handling of \code{NA}s.}
 }
 \description{
 This function is used to draw MCMC samples using the Gibbs 
@@ -117,6 +137,13 @@ The function \code{iidm} can fit two types of model, depending on whether
   Priors:
   \deqn{\bm{\beta} \sim N_{p}(\bm{\mu}_{\bm{\beta}}, \bm{\Sigma}_{\bm{\beta}})}
   \deqn{\sigma^{2} \text{ (mean)}, \sigma \text{ (quantile)} \sim IG(a_{\sigma}, b_{\sigma})}
+
+  Parallel execution is only available if the package was compiled with 
+  \code{OpenMP} support. This mode samples the exponential latent variables 
+  for quantile regression in parallel, but the current implementation does 
+  not improve computational times. Parallel and sequential execution are
+  both reproducible with \code{\link{set.seed}}, and the numerical results 
+  between the two modes should be the same.
 }
 \examples{
 ## Annette Dobson (1990) "An Introduction to Generalized Linear Models".
@@ -144,7 +171,7 @@ Bayesian quantile regression.
 }
 \seealso{
 \code{\link{confint.iidm}}, \code{\link{predict.iidm}}, 
-  \code{\link{summary.iidm}}
+  \code{\link{print.iidm}}, \code{\link{summary.iidm}}
 }
 \author{
 Jorge Castillo-Mateo

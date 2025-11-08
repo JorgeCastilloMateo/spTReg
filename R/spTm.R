@@ -11,6 +11,13 @@
 #'   \deqn{\mathbf{Y}_{t\ell} = \mathbf{O}_{t\ell} + \mathbf{P} (\mathbf{Y}_{t,\ell-1} - \mathbf{O}_{t,\ell-1}) + \bm{\epsilon}_{t\ell},}
 #'   \deqn{\mathbf{O}_{t\ell} = \mathbf{X}_{t\ell} \bm{\beta} + \mathbf{U}_{t\ell} \bm{\gamma}_{t} + \sum_{m=1}^{r} \mathbf{V}_{t\ell,m} \bm{\alpha}_{m},}
 #'   \deqn{\bm{\epsilon}_{t\ell} \sim \text{i.i.d. } N_{n}(\mathbf{0}_{n}, \bm{\Sigma}).}
+#'
+#'   Parallel execution is only available if the package was compiled with 
+#'   \code{OpenMP} support. This mode samples the exponential latent variables 
+#'   for quantile regression in parallel, but the current implementation does 
+#'   not improve computational times. Parallel and sequential execution are
+#'   both reproducible with \code{\link{set.seed}}, and the numerical results 
+#'   between the two modes should be the same.
 #'   
 #' @param formula an object of class \code{"\link[stats]{formula}"} (or one 
 #'   that can be coerced to that class): a symbolic description of the model to
@@ -90,6 +97,7 @@ spTm <- function(
   v,
   data, 
   subset,
+  na.action,
   method = c("mean", "quantile"),
   quantile = 0.5,
   #ar.fun = ~ -1,
@@ -114,8 +122,10 @@ spTm <- function(
   n.samples = 1000, 
   n.thin = 1, 
   n.burnin = 1000, 
-  verbose = TRUE,
-  n.report = 100, 
+  verbose = FALSE,
+  n.report = 100,
+  parallel = FALSE,
+  n.threads = 0,
   model = TRUE, 
   x = FALSE, 
   y = FALSE,
@@ -138,7 +148,7 @@ spTm <- function(
   ret.y <- y
   cl <- match.call()
   mf <- match.call(expand.dots = FALSE)
-  m <- match(c("formula", "data", "subset"), names(mf), 0L)
+  m <- match(c("formula", "data", "subset", "na.action"), names(mf), 0L)
   mf <- mf[c(1L, m)]
   mf$drop.unused.levels <- TRUE
   mf[[1L]] <- quote(stats::model.frame)
@@ -197,15 +207,14 @@ spTm <- function(
       starting$alpha <- matrix(starting$alpha, nrow = n, ncol = r)
     if (length(starting$hp) == 3) 
       starting$hp <- matrix(starting$hp, nrow = 3, ncol = r)
-    keep <- matrix(nrow = n.samples / n.thin, ncol = p + 1 + r * (n + 3))
     if (!verbose) 
       n.report <- n.samples + 1
     
     dist <- dist1(coords)
     
+    time <- Sys.time()
     if (method.mean) {
-      
-      params <- spMeanRcpp(
+      res <- spMeanRcpp(
         y,
         x,
         u,
@@ -230,19 +239,15 @@ spTm <- function(
         q,
         r,
         s - 1,
-        keep,
         n.samples,
         n.thin,
         n.burnin,
         n.report
       )
-
       ind.sigma <- c(p + 1, p + 3 + n + 0:(r-1) * (n + 3))
-      params[, ind.sigma] <- 1 / sqrt(params[, ind.sigma])
-      
+      res$params[, ind.sigma] <- 1 / sqrt(res$params[, ind.sigma])
     } else {
-      
-      params <- spQuantileRcpp(
+      res <- spQuantileRcpp(
         quantile,
         y,
         x,
@@ -265,43 +270,59 @@ spTm <- function(
         p,
         r,
         s - 1,
-        keep,
         n.samples,
         n.thin,
         n.burnin,
-        n.report
+        n.report,
+        parallel,
+        n.threads
       )
-      
-      params[, p + 1] <- 1 / params[, p + 1]
+      res$params[, p + 1] <- 1 / res$params[, p + 1]
       ind.sigma <- p + 3 + n + 0:(r-1) * (n + 3)
-      params[, ind.sigma] <- 1 / sqrt(params[, ind.sigma])
+      res$params[, ind.sigma] <- 1 / sqrt(res$params[, ind.sigma])
     }
+    time <- Sys.time() - time
     
-    colnames(params) <- 1:ncol(params)
+    colnames(res$params) <- 1:ncol(res$params)
     if (is.null(colnames(x))) {
-      colnames(params)[1:(p+1)] <- c(paste0("V", 1:p), "sigma")
+      colnames(res$params)[1:(p+1)] <- c(paste0("V", 1:p), "sigma")
     } else {
-      colnames(params)[1:(p+1)] <- c(colnames(x), "sigma")
+      colnames(res$params)[1:(p+1)] <- c(colnames(x), "sigma")
     }
     for (m in 1:r) {
-      colnames(params)[p+1 + (m - 1) * (n + 3) + 1:(n+3)] <- 
+      colnames(res$params)[p+1 + (m - 1) * (n + 3) + 1:(n+3)] <- 
         c(paste0("beta", m, "(s", 1:n, ")"), 
           paste0(c("mu", "sigma", "phi"), m))
     }
     
-    params <- coda::mcmc(params, 
-                         start = n.burnin + 1, 
-                         end = n.burnin + n.samples, 
-                         thin = n.thin)
+    res$params <- coda::mcmc(
+      res$params, 
+      start = n.burnin + 1, 
+      end = n.burnin + n.samples, 
+      thin = n.thin)
     
-    z <- list(
-      p.params.samples = params,
-      method = method
-    )
+    z <- list(p.params.samples = res$params)
+    if (length(res) > 1) {
+      colnames(res$missing) <- which(!is.finite(y))
+      res$missing <- coda::mcmc(
+        res$missing, 
+        start = n.burnin + 1, 
+        end = n.burnin + n.samples, 
+        thin = n.thin)
+      z$Y.missing.samples <- res$missing
+    }    
+    z$mcmc <- list(
+      n.samples = n.samples, 
+      n.thin = n.thin, 
+      n.burnin = n.burnin, 
+      time = time)
+    z$method <- method
   }
   
   if (!method.mean)
     z$quantile <- quantile
+  z$rank <- p
+  z$na.action <- attr(mf, "na.action")
   z$xlevels <- stats::.getXlevels(mt, mf)
   z$call <- cl
   z$terms <- mt

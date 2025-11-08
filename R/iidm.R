@@ -16,6 +16,13 @@
 #'   Priors:
 #'   \deqn{\bm{\beta} \sim N_{p}(\bm{\mu}_{\bm{\beta}}, \bm{\Sigma}_{\bm{\beta}})}
 #'   \deqn{\sigma^{2} \text{ (mean)}, \sigma \text{ (quantile)} \sim IG(a_{\sigma}, b_{\sigma})}
+#' 
+#'   Parallel execution is only available if the package was compiled with 
+#'   \code{OpenMP} support. This mode samples the exponential latent variables 
+#'   for quantile regression in parallel, but the current implementation does 
+#'   not improve computational times. Parallel and sequential execution are
+#'   both reproducible with \code{\link{set.seed}}, and the numerical results 
+#'   between the two modes should be the same.
 #'   
 #' @param formula an object of class \code{"\link[stats]{formula}"} (or one 
 #'   that can be coerced to that class): a symbolic description of the model to
@@ -28,7 +35,10 @@
 #' @param subset an optional vector specifying a subset of observations to be 
 #'   used in the fitting process. (See additional details about how this 
 #'   argument interacts with data-dependent bases in the `Details' section of 
-#'   the \code{\link[stats]{model.frame}} documentation.)
+#'   the \code{\link[stats]{model.frame}} documentation.
+#' @param na.action a function indicating how to handle \code{NA}s; 
+#'   \code{na.omit} deletes cases, \code{na.pass} keeps and imputes them within 
+#'   the MCMC (similar to \code{NULL}). See \code{\link[base]{options}}.
 #' @param method the method to be used for fitting, \code{"mean"} or 
 #'   \code{"quantile"} regression (default=\code{"mean"}).
 #' @param quantile a numeric scalar containing the quantile level of interest 
@@ -47,7 +57,7 @@
 #'   tags are \code{"beta"} and \code{"sigma"}. The \code{"beta"} tag can be 
 #'   either a number \eqn{\beta^{(0)}} such that 
 #'   \eqn{\bm{\beta}^{(0)} = \beta^{(0)} \textbf{1}_{p}} or directly the vector
-#'   \eqn{\bm{\beta}^{(0)}}. The \code{"sigma"} tag must be a number 
+#'   \eqn{\bm{\beta}^{(0)}}. The \code{"sigma"} tag must be a positive number 
 #'   \eqn{\sigma^{(0)}}.
 #' @param n.samples the number of MCMC iterations after \code{n.burnin}.
 #' @param n.thin the number of MCMC iterations kept is 1 out of \code{n.thin} 
@@ -57,31 +67,42 @@
 #'   sampler is printed to the screen. Otherwise, nothing is printed to the 
 #'   screen.
 #' @param n.report the interval to report MCMC progress.
-#' @param model,x,y logicals. If \code{TRUE} the corresponding components of 
+#' @param parallel logical; if method="quantile", whether to run the 
+#'   computation in parallel using \code{OpenMP} (default = \code{FALSE}).
+#'   See `Details'.
+#' @param n.threads integer; number of threads to use when 
+#'   \code{parallel = TRUE}.  
+#'   The default \code{0} uses all available physical cores.  
+#'   This argument is ignored when \code{parallel = FALSE}.
+#' @param model,x,y logicals; if \code{TRUE} the corresponding components of 
 #'   the fit (the model frame, the model matrix, the response) are returned.
 #' @param ... currently no additional arguments.
 #' 
 #' @return An object of class \code{iidm}, which is a list comprising:
 #'   \item{p.params.samples}{a \code{coda} object of posterior samples for the 
 #'     model parameters, that is \eqn{\bm{\beta}} and \eqn{\sigma}.}
+#'   \item{Y.missing.samples}{a \code{coda} object of posterior samples for the 
+#'     imputed missing response values.}
 #'   \item{mcmc}{a list with information of the MCMC chain, that is 
 #'     \code{n.samples}, \code{n.thin}, \code{n.burnin}, and CPU \code{time} 
 #'     used.}
 #'   \item{method}{the method used.}
 #'   \item{quantile}{if method="quantile", the quantile level used.}
 #'   \item{rank}{the numeric rank of the fitted linear model.}
-#'   \item{xlevels}{(only where relevant) a record of the levels of the factors
+#'   \item{xlevels}{(where relevant) a record of the levels of the factors
 #'     used in fitting.}
 #'   \item{call}{the matched call.}
 #'   \item{terms}{the \code{\link[stats]{terms}} object used.}
 #'   \item{y}{if requested, the response used.}
 #'   \item{x}{if requested, the model matrix used.}
 #'   \item{model}{if requested (the default), the model frame used.}
+#'   \item{na.action}{(where relevant) information returned by 
+#'     \code{\link[stats]{model.frame}} on the special handling of \code{NA}s.}
 #' 
 #' @author Jorge Castillo-Mateo
 #' 
 #' @seealso \code{\link{confint.iidm}}, \code{\link{predict.iidm}}, 
-#'   \code{\link{summary.iidm}}
+#'   \code{\link{print.iidm}}, \code{\link{summary.iidm}}
 #' 
 #' @references 
 #' Kozumi H, Kobayashi G (2011). 
@@ -111,6 +132,7 @@ iidm <- function(
   formula,
   data,
   subset,
+  na.action,
   method = c("mean", "quantile"),
   quantile = 0.5,
   priors = list("beta" = c(0, 1 / 100), "sigma" = c(0.1, 0.1)), 
@@ -118,8 +140,10 @@ iidm <- function(
   n.samples = 1000, 
   n.thin = 1, 
   n.burnin = 1000, 
-  verbose = TRUE,
-  n.report = 100, 
+  verbose = FALSE,
+  n.report = 100,
+  parallel = FALSE,
+  n.threads = 0,
   model = TRUE, 
   x = FALSE, 
   y = FALSE,
@@ -143,7 +167,7 @@ iidm <- function(
   ret.y <- y
   cl <- match.call()
   mf <- match.call(expand.dots = FALSE)
-  m <- match(c("formula", "data", "subset"), names(mf), 0L)
+  m <- match(c("formula", "data", "subset", "na.action"), names(mf), 0L)
   mf <- mf[c(1L, m)]
   mf$drop.unused.levels <- TRUE
   mf[[1L]] <- quote(stats::model.frame)
@@ -178,13 +202,12 @@ iidm <- function(
       starting$beta <- rep(starting$beta, p)
     if (length(starting$sigma) != 1)
       stop("'starting$sigma' should have 'length' equal to 1")
-    keep <- matrix(nrow = n.samples / n.thin, ncol = p + 1)
     if (!verbose) 
-      n.report <- n.samples + 1
+      n.report <- 0
     
+    time <- Sys.time()
     if (method.mean) {
-      time <- Sys.time()
-      params <- iidMeanRcpp(
+      res <- iidMeanRcpp(
         y,
         x,
         priors$beta$M,
@@ -195,19 +218,14 @@ iidm <- function(
         1 / starting$sigma^2,
         N,
         p,
-        keep,
         n.samples,
         n.thin,
         n.burnin,
         n.report
       )
-      time <- Sys.time() - time
-      
-      params[, p + 1] <- 1 / sqrt(params[, p + 1])
-      
+      res$params[, p + 1] <- 1 / sqrt(res$params[, p + 1])
     } else {
-      time <- Sys.time()
-      params <- iidQuantileRcpp(
+      res <- iidQuantileRcpp(
         quantile,
         y,
         x,
@@ -219,43 +237,51 @@ iidm <- function(
         1 / starting$sigma,
         N,
         p,
-        keep,
         n.samples,
         n.thin,
         n.burnin,
-        n.report
+        n.report,
+        parallel,
+        n.threads
       )
-      time <- Sys.time() - time
-      
-      params[, p + 1] <- 1 / params[, p + 1]
-      
+      res$params[, p + 1] <- 1 / res$params[, p + 1]
     }
+    time <- Sys.time() - time
     
     if (is.null(colnames(x))) {
-      colnames(params) <- c(paste0("V", 1:p), "sigma")
+      colnames(res$params) <- c(paste0("V", 1:p), "sigma")
     } else {
-      colnames(params) <- c(colnames(x), "sigma")
+      colnames(res$params) <- c(colnames(x), "sigma")
     }
     
-    params <- coda::mcmc(params, 
-                         start = n.burnin + 1, 
-                         end = n.burnin + n.samples, 
-                         thin = n.thin)
+    res$params <- coda::mcmc(
+      res$params, 
+      start = n.burnin + 1, 
+      end = n.burnin + n.samples, 
+      thin = n.thin)
     
-    z <- list(
-      p.params.samples = params,
-      mcmc = list(
-        n.samples = n.samples, 
-        n.thin = n.thin, 
-        n.burnin = n.burnin, 
-        time = time),
-      method = method
-    )
+    z <- list(p.params.samples = res$params)
+    if (length(res) > 1) {
+      colnames(res$missing) <- which(!is.finite(y))
+      res$missing <- coda::mcmc(
+        res$missing, 
+        start = n.burnin + 1, 
+        end = n.burnin + n.samples, 
+        thin = n.thin)
+      z$Y.missing.samples <- res$missing
+    }    
+    z$mcmc <- list(
+      n.samples = n.samples, 
+      n.thin = n.thin, 
+      n.burnin = n.burnin, 
+      time = time)
+    z$method <- method
   }
   
   if (!method.mean)
     z$quantile <- quantile
   z$rank <- p
+  z$na.action <- attr(mf, "na.action")
   z$xlevels <- stats::.getXlevels(mt, mf)
   z$call <- cl
   z$terms <- mt

@@ -4,7 +4,7 @@
 \alias{krigeBayes}
 \title{Bayesian kriging for spatially varying coefficients}
 \usage{
-krigeBayes(w, hp, coords, newcoords, ...)
+krigeBayes(w, hp, coords, newcoords, parallel = FALSE, n.threads = 0, ...)
 }
 \arguments{
 \item{w}{a \eqn{B \times n} matrix with columns 
@@ -19,21 +19,36 @@ in \eqn{D \subset R^{2}}.}
 \item{newcoords}{a \eqn{n_{0} \times 2} matrix of the new coordinates to 
 krige, this is a grid \eqn{G_{D} \subset D \subset R^{2}}.}
 
+\item{parallel}{logical; whether to run the computation in parallel 
+using \code{OpenMP} (default = \code{FALSE}). See `Details'.}
+
+\item{n.threads}{integer; number of threads to use when 
+\code{parallel = TRUE}.  
+The default \code{0} uses all available physical cores.  
+This argument is ignored when \code{parallel = FALSE}.}
+
 \item{...}{additional argument(s) for methods.}
 }
 \value{
-a \code{coda} object of posterior samples for the kriged 
-  coefficient, that is \eqn{w(\mathbf{s}_{j})} for all
-  \eqn{\mathbf{s}_{j} \in G_{D}}.
+a \eqn{B \times n_{0}} matrix or \code{coda} object of posterior 
+  samples for the kriged coefficient, that is \eqn{w(\mathbf{s}_{j})} for
+  all \eqn{\mathbf{s}_{j} \in G_{D}}.
 }
 \description{
 Bayesian kriging for a spatially varying coefficient in terms
   of the coefficients in the observation coordinates and the hyperparameters
   of the Gaussian process prior.
+}
+\details{
+The Gaussian process with exponential covariance function is defined as: 
+  
+  \deqn{w(\mathbf{s}) \sim GP(\mu, C(\mathbf{s}, \mathbf{s}^{\prime}; \sigma^{2}, \phi)).}
 
-Function currently working but under development. 
-
-\deqn{w(\mathbf{s}) \sim GP(\mu, C(\mathbf{s}, \mathbf{s}^{\prime}; \sigma^{2}, \phi))}
+  Parallel execution is only available if the package was compiled with 
+  \code{OpenMP} support. Parallel and sequential execution are both 
+  reproducible with \code{\link{set.seed}}, but the numerical results will 
+  differ between the two modes because the underlying random-number streams 
+  are independent.
 }
 \author{
 Jorge Castillo-Mateo

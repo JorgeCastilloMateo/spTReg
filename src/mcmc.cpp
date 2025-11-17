@@ -230,10 +230,13 @@ Rcpp::List spMeanRcpp(
     const arma::mat& X,
     const arma::mat& U,
     const arma::mat& V,
+    const std::vector<arma::mat>& X_alpha,
     const arma::mat& dist, 
     const arma::vec& M,    // priors
     const arma::mat& P,
-    const double da,    
+    const std::vector<arma::vec>& M_beta_alpha,
+    const std::vector<arma::mat>& P_beta_alpha,
+    const double da,
     const double db,    
     const double ga,
     const double gb,
@@ -243,12 +246,14 @@ Rcpp::List spMeanRcpp(
     arma::mat gamma,
     arma::mat alpha,
     double prec,
-    arma::mat hp,       
+    arma::mat hp,
+    std::vector<arma::vec>& beta_alpha,
     const int N,           // constants
     const int n,
     const int p,
     const int q,
     const int r,        
+    const arma::vec& p_alpha,
     const arma::uvec& s,
     const int nSims,       // MCMC numbers
     const int nThin,
@@ -268,6 +273,10 @@ Rcpp::List spMeanRcpp(
   const arma::mat Xt  = X.t();
   const arma::mat XtX = Xt * X;
   const arma::vec PM = P * M;
+  std::vector<arma::vec> PM_beta_alpha(r);
+  for (int m = 0; m < r; ++m) {
+    PM_beta_alpha[m] = P_beta_alpha[m] * M_beta_alpha[m];
+  }
   
   // residual
   arma::vec Xb = X * beta;
@@ -281,8 +290,13 @@ Rcpp::List spMeanRcpp(
     e -= V_m % alpha_m.elem(s);
   }
 
+  std::vector<arma::vec> Xb_alpha(r);
+  for (int m = 0; m < r; ++m) {
+    Xb_alpha[m] = X_alpha[m] * beta_alpha[m];
+  }
+  
   // aux GP
-  arma::vec onen(n, arma::fill::ones);
+  //arma::vec onen(n, arma::fill::ones);
   int Ndn = N / n;
   
   std::vector<arma::uvec> s_group(n);
@@ -303,12 +317,11 @@ Rcpp::List spMeanRcpp(
   
   arma::cube R(n, n, r);
   arma::vec Rlogdet(r);
-  arma::vec oneRone(r);
+  std::vector<arma::mat> xR(r);
   
   for (int m = 0; m < r; ++m) {
     R.slice(m) = arma::inv_sympd(exp(- hp(2, m) * dist));
     Rlogdet(m) = arma::log_det_sympd(R.slice(m));
-    oneRone(m) = arma::accu(R.slice(m));
   }
   
   double decay_aux;
@@ -327,9 +340,9 @@ Rcpp::List spMeanRcpp(
   // full posterior Precision rhs of alpha
   arma::mat Qn(n, n);
   arma::vec bn(n);
-  // full posterior parameters chi delta of mu
-  //double chi;
-  //double delta;
+  // full posterior Precision rhs of beta_alpha
+  std::vector<arma::mat> Qp_alpha(r);
+  std::vector<arma::vec> bp_alpha(r);
   // full posterior parameters A B of prec, and C D of prec (alpha)
   double A = 0.5 * N + ga;
   double B;
@@ -338,8 +351,10 @@ Rcpp::List spMeanRcpp(
   
   // save
   int save_idx = 0;
-  int nCols = p + 1 + r * (n + 3);
-  arma::mat keep(nKeep, nCols);
+  int nCols1 = p + 1;
+  int nCols2 = r * (n + 3) + arma::accu(p_alpha);
+  arma::mat keep(nKeep, nCols1);
+  arma::mat keep_alpha(nKeep, nCols2);
 
   // time
   auto start_time = std::chrono::steady_clock::now();
@@ -377,7 +392,7 @@ Rcpp::List spMeanRcpp(
       V_m = V.col(m);
       e += V_m % alpha_m.elem(s);
       Qn = hp(1, m) * R.slice(m);
-      bn = Qn * (onen * hp(0, m));
+      bn = Qn * Xb_alpha[m];
       for (int i = 0; i < n; ++i) {
         V_block = V_m.elem(s_group[i]);
         e_block = e.elem(s_group[i]);
@@ -390,16 +405,18 @@ Rcpp::List spMeanRcpp(
       e -= V_m % alpha_m.elem(s);
       
       // mu 
-      //delta = 1 / (oneRone(m) * hp(1, m) + nb);
-      //chi   = arma::as_scalar(onen.t() * R.slice(m) * alpha.col(m)) * hp(1, m) + na * nb;
-      //hp(0, m) = R::rnorm(delta * chi, sqrt(delta));
+      xR[m] = hp(1, m) * X_alpha[m].t() * R.slice(m);
+      Qp_alpha[m] = xR[m] * X_alpha[m] + P_beta_alpha[m];
+      bp_alpha[m] = xR[m] * alpha_m + PM_beta_alpha[m];
+      beta_alpha[m] = RandomMultiNormalC(Qp_alpha[m], bp_alpha[m]);
+      Xb_alpha[m] = X_alpha[m] * beta_alpha[m];
       
       // decay
       ldecay_aux  = R::rnorm(ldecay(m), sd(m));
       decay_aux   = exp(ldecay_aux);
       R_aux       = arma::inv_sympd(exp(- decay_aux * dist));
       Rlogdet_aux = arma::log_det_sympd(R_aux);
-      vn       = alpha.col(m) - hp(0, m);
+      vn       = alpha_m - Xb_alpha[m];
       vtRv_aux = arma::as_scalar(vn.t() * R_aux * vn);
       vtRv     = arma::as_scalar(vn.t() * R.slice(m) * vn);
       ALPHA = 
@@ -413,7 +430,6 @@ Rcpp::List spMeanRcpp(
         ldecay(m) = ldecay_aux;
         R.slice(m) = R_aux;
         Rlogdet(m) = Rlogdet_aux;
-        oneRone(m) = arma::accu(R);
         vtRv = vtRv_aux;
       }
       
@@ -477,9 +493,12 @@ Rcpp::List spMeanRcpp(
       keep(save_idx, arma::span(0, p - 1)) = beta.t();
       keep(save_idx, p) = prec;
       if (r > 0) {
+      nCols2 = 0;
       for (int m = 0; m < r; ++m) {
-        keep(save_idx, arma::span(p + 1 + m * (n + 3), p + n + m * (n + 3))) = alpha.col(m).t();
-        keep(save_idx, arma::span(p + 1 + n + m * (n + 3), p + (m + 1) * (n + 3))) = hp.col(m).t();
+        keep_alpha(save_idx, arma::span(nCols2, n - 1 + nCols2)) = alpha.col(m).t();
+        keep_alpha(save_idx, arma::span(n + nCols2, n + p_alpha[m] - 1 + nCols2)) = beta_alpha[m].t();
+        keep_alpha(save_idx, arma::span(n + p_alpha[m] + nCols2, n + p_alpha[m] + 2 + nCols2)) = hp.col(m).t();
+        nCols2 += n + p_alpha[m] + 3;
       }
       }
       ++save_idx;
@@ -488,11 +507,13 @@ Rcpp::List spMeanRcpp(
   
   if (missing_n == 0) {
     return Rcpp::List::create(
-      Rcpp::Named("params") = keep
+      Rcpp::Named("params") = keep,
+      Rcpp::Named("process") = keep_alpha
     );
   } else {
     return Rcpp::List::create(
       Rcpp::Named("params") = keep,
+      Rcpp::Named("process") = keep_alpha,
       Rcpp::Named("missing") = keep_Y
     );
   }
@@ -504,10 +525,13 @@ Rcpp::List spQuantileRcpp(
     const double tau,      // quantile level
     arma::vec Y,           // data
     const arma::mat& X,
-    const arma::mat& V,  
+    const arma::mat& V,
+    const std::vector<arma::mat>& X_alpha,
     const arma::mat& dist, 
     const arma::vec& M,    // prior values
     const arma::mat& P,
+    const std::vector<arma::vec>& M_beta_alpha,
+    const std::vector<arma::mat>& P_beta_alpha,
     const double da,    
     const double db,    
     const double ga,
@@ -517,11 +541,13 @@ Rcpp::List spQuantileRcpp(
     arma::vec beta,        // initial
     arma::mat alpha,    
     double prec,
-    arma::mat hp,       
+    arma::mat hp,
+    std::vector<arma::vec>& beta_alpha,
     const int N,          // constants
     const int n,        
     const int p,
-    const int r,        
+    const int r,
+    const arma::vec& p_alpha,
     const arma::uvec& s,  
     const int nSims,      // MCMC numbers
     const int nThin,
@@ -546,6 +572,10 @@ Rcpp::List spQuantileRcpp(
   const double c3 = 2 + c1 * c1 * c2;
   const double c4 = sqrt(c3 / c2);
   const arma::vec PM = P * M;
+  std::vector<arma::vec> PM_beta_alpha(r);
+  for (int m = 0; m < r; ++m) {
+    PM_beta_alpha[m] = P_beta_alpha[m] * M_beta_alpha[m];
+  }
   
   // aux
   arma::vec c2dxi(N);
@@ -565,8 +595,13 @@ Rcpp::List spQuantileRcpp(
     e -= V_m % alpha_m.elem(s);
   }
   
+  std::vector<arma::vec> Xb_alpha(r);
+  for (int m = 0; m < r; ++m) {
+    Xb_alpha[m] = X_alpha[m] * beta_alpha[m];
+  }
+  
   // aux GP
-  arma::vec onen(n, arma::fill::ones);
+  //arma::vec onen(n, arma::fill::ones);
   int Ndn = N / n;
   
   std::vector<arma::uvec> s_group(n);
@@ -588,12 +623,11 @@ Rcpp::List spQuantileRcpp(
   
   arma::cube R(n, n, r);
   arma::vec Rlogdet(r);
-  arma::vec oneRone(r);
+  std::vector<arma::mat> xR(r);
   
   for (int m = 0; m < r; ++m) {
     R.slice(m) = arma::inv_sympd(exp(- hp(2, m) * dist));
     Rlogdet(m) = arma::log_det_sympd(R.slice(m));
-    oneRone(m) = arma::accu(R.slice(m));
   }
   
   double decay_aux;
@@ -612,9 +646,9 @@ Rcpp::List spQuantileRcpp(
   // full posterior Precision rhs of alpha
   arma::mat Qn(n, n);
   arma::vec bn(n);
-  // full posterior parameters chi delta of mu
-  //double chi;
-  //double delta;
+  // full posterior Precision rhs of beta_alpha
+  std::vector<arma::mat> Qp_alpha(r);
+  std::vector<arma::vec> bp_alpha(r);
   // full posterior parameters A B of prec, and C D of prec (alpha)
   double A = 1.5 * N + ga;
   double B;
@@ -623,8 +657,10 @@ Rcpp::List spQuantileRcpp(
   
   // save
   int save_idx = 0;
-  int nCols = p + 1 + r * (n + 3);
-  arma::mat keep(nKeep, nCols);
+  int nCols1 = p + 1;
+  int nCols2 = r * (n + 3) + arma::accu(p_alpha);
+  arma::mat keep(nKeep, nCols1);
+  arma::mat keep_alpha(nKeep, nCols2);
   
   // time
   auto start_time = std::chrono::steady_clock::now();
@@ -661,7 +697,7 @@ Rcpp::List spQuantileRcpp(
       V_m = V.col(m);
       e += V_m % alpha_m.elem(s);
       Qn = hp(1, m) * R.slice(m);
-      bn = Qn * (onen * hp(0, m));
+      bn = Qn * Xb_alpha[m];
       for (int i = 0; i < n; ++i) {
         V_block = V_m.elem(s_group[i]);
         e_block = e.elem(s_group[i]);
@@ -676,16 +712,18 @@ Rcpp::List spQuantileRcpp(
       e -= V_m % alpha_m.elem(s);
 
       // mu 
-      //delta = 1 / (oneRone(m) * hp(1, m) + nb);
-      //chi   = arma::as_scalar(onen.t() * R.slice(m) * alpha.col(m)) * hp(1, m) + na * nb;
-      //hp(0, m) = R::rnorm(delta * chi, sqrt(delta));
+      xR[m] = hp(1, m) * X_alpha[m].t() * R.slice(m);
+      Qp_alpha[m] = xR[m] * X_alpha[m] + P_beta_alpha[m];
+      bp_alpha[m] = xR[m] * alpha_m + PM_beta_alpha[m];
+      beta_alpha[m] = RandomMultiNormalC(Qp_alpha[m], bp_alpha[m]);
+      Xb_alpha[m] = X_alpha[m] * beta_alpha[m];
       
       // decay
       ldecay_aux  = R::rnorm(ldecay(m), sd(m));
       decay_aux   = exp(ldecay_aux);
       R_aux       = arma::inv_sympd(exp(- decay_aux * dist));
       Rlogdet_aux = arma::log_det_sympd(R_aux);
-      vn       = alpha.col(m) - hp(0, m);
+      vn       = alpha_m - Xb_alpha[m];
       vtRv_aux = arma::as_scalar(vn.t() * R_aux * vn);
       vtRv     = arma::as_scalar(vn.t() * R.slice(m) * vn);
       ALPHA = 
@@ -699,7 +737,6 @@ Rcpp::List spQuantileRcpp(
         ldecay(m) = ldecay_aux;
         R.slice(m) = R_aux;
         Rlogdet(m) = Rlogdet_aux;
-        oneRone(m) = arma::accu(R);
         vtRv = vtRv_aux;
       }
       
@@ -755,9 +792,12 @@ Rcpp::List spQuantileRcpp(
       keep(save_idx, arma::span(0, p - 1)) = beta.t();
       keep(save_idx, p) = prec;
       if (r > 0) {
+        nCols2 = 0;
         for (int m = 0; m < r; ++m) {
-          keep(save_idx, arma::span(p + 1 + m * (n + 3), p + n + m * (n + 3))) = alpha.col(m).t();
-          keep(save_idx, arma::span(p + 1 + n + m * (n + 3), p + (m + 1) * (n + 3))) = hp.col(m).t();
+          keep_alpha(save_idx, arma::span(nCols2, n - 1 + nCols2)) = alpha.col(m).t();
+          keep_alpha(save_idx, arma::span(n + nCols2, n + p_alpha[m] - 1 + nCols2)) = beta_alpha[m].t();
+          keep_alpha(save_idx, arma::span(n + p_alpha[m] + nCols2, n + p_alpha[m] + 2 + nCols2)) = hp.col(m).t();
+          nCols2 += n + p_alpha[m] + 3;
         }
       }
       ++save_idx;
@@ -766,11 +806,13 @@ Rcpp::List spQuantileRcpp(
   
   if (missing_n == 0) {
     return Rcpp::List::create(
-      Rcpp::Named("params") = keep
+      Rcpp::Named("params") = keep,
+      Rcpp::Named("process") = keep_alpha
     );
   } else {
     return Rcpp::List::create(
       Rcpp::Named("params") = keep,
+      Rcpp::Named("process") = keep_alpha,
       Rcpp::Named("missing") = keep_Y
     );
   }

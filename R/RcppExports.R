@@ -9,12 +9,12 @@ iidQuantileRcpp <- function(tau, Y, X, M, P, ga, gb, beta, prec, N, p, nSims, nT
     .Call('_spTReg_iidQuantileRcpp', PACKAGE = 'spTReg', tau, Y, X, M, P, ga, gb, beta, prec, N, p, nSims, nThin, nBurnin, nReport, parallel, nThreads)
 }
 
-spMeanRcpp <- function(Y, X, U, V, dist, M, P, da, db, ga, gb, na, nb, beta, gamma, alpha, prec, hp, N, n, p, q, r, s, nSims, nThin, nBurnin, nReport) {
-    .Call('_spTReg_spMeanRcpp', PACKAGE = 'spTReg', Y, X, U, V, dist, M, P, da, db, ga, gb, na, nb, beta, gamma, alpha, prec, hp, N, n, p, q, r, s, nSims, nThin, nBurnin, nReport)
+spMeanRcpp <- function(Y, X, U, V, X_alpha, dist, M, P, M_beta_alpha, P_beta_alpha, da, db, ga, gb, na, nb, beta, gamma, alpha, prec, hp, beta_alpha, N, n, p, q, r, p_alpha, s, nSims, nThin, nBurnin, nReport) {
+    .Call('_spTReg_spMeanRcpp', PACKAGE = 'spTReg', Y, X, U, V, X_alpha, dist, M, P, M_beta_alpha, P_beta_alpha, da, db, ga, gb, na, nb, beta, gamma, alpha, prec, hp, beta_alpha, N, n, p, q, r, p_alpha, s, nSims, nThin, nBurnin, nReport)
 }
 
-spQuantileRcpp <- function(tau, Y, X, V, dist, M, P, da, db, ga, gb, na, nb, beta, alpha, prec, hp, N, n, p, r, s, nSims, nThin, nBurnin, nReport, parallel, nThreads) {
-    .Call('_spTReg_spQuantileRcpp', PACKAGE = 'spTReg', tau, Y, X, V, dist, M, P, da, db, ga, gb, na, nb, beta, alpha, prec, hp, N, n, p, r, s, nSims, nThin, nBurnin, nReport, parallel, nThreads)
+spQuantileRcpp <- function(tau, Y, X, V, X_alpha, dist, M, P, M_beta_alpha, P_beta_alpha, da, db, ga, gb, na, nb, beta, alpha, prec, hp, beta_alpha, N, n, p, r, p_alpha, s, nSims, nThin, nBurnin, nReport, parallel, nThreads) {
+    .Call('_spTReg_spQuantileRcpp', PACKAGE = 'spTReg', tau, Y, X, V, X_alpha, dist, M, P, M_beta_alpha, P_beta_alpha, da, db, ga, gb, na, nb, beta, alpha, prec, hp, beta_alpha, N, n, p, r, p_alpha, s, nSims, nThin, nBurnin, nReport, parallel, nThreads)
 }
 
 spTMeanRcpp <- function() {

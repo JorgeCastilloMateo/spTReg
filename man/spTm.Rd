@@ -8,6 +8,7 @@ spTm(
   formula,
   u,
   v,
+  x_alpha,
   data,
   subset,
   na.action,

@@ -95,6 +95,7 @@ spTm <- function(
   formula, 
   u,
   v,
+  x_alpha, # list of design matrix for each process
   data, 
   subset,
   na.action,
@@ -210,6 +211,18 @@ spTm <- function(
     if (!verbose) 
       n.report <- n.samples + 1
     
+    ### provisional ###
+    p_alpha <- sapply(x_alpha, ncol, simplify = TRUE)
+    M_beta_alpha <- list()
+    P_beta_alpha <- list()
+    beta_alpha <- list()
+    for (m in 1:r) {
+      M_beta_alpha[[m]] <- rep(0, p_alpha[m])
+      P_beta_alpha[[m]] <- priors$mu[2] * diag(p_alpha[m])
+      beta_alpha[[m]] <- rep(0, p_alpha[m])
+    }
+    ### ###
+    
     dist <- dist1(coords)
     
     time <- Sys.time()
@@ -219,9 +232,12 @@ spTm <- function(
         x,
         u,
         v,
+        x_alpha,
         dist,
         priors$beta$M,
         priors$beta$P,
+        M_beta_alpha,
+        P_beta_alpha,
         priors$phi[1],
         priors$phi[2],
         priors$sigma[1],
@@ -233,28 +249,32 @@ spTm <- function(
         starting$alpha,
         1 / starting$sigma^2,
         starting$hp,
+        beta_alpha,
         N,
         n,
         p,
         q,
         r,
+        p_alpha,
         s - 1,
         n.samples,
         n.thin,
         n.burnin,
         n.report
       )
-      ind.sigma <- c(p + 1, p + 3 + n + 0:(r-1) * (n + 3))
-      res$params[, ind.sigma] <- 1 / sqrt(res$params[, ind.sigma])
+      res$params[, p + 1] <- 1 / sqrt(res$params[, p + 1])
     } else {
       res <- spQuantileRcpp(
         quantile,
         y,
         x,
         v,
+        x_alpha,
         dist,
         priors$beta$M,
         priors$beta$P,
+        M_beta_alpha,
+        P_beta_alpha,
         priors$phi[1],
         priors$phi[2],
         priors$sigma[1],
@@ -265,10 +285,12 @@ spTm <- function(
         starting$alpha,
         1 / starting$sigma,
         starting$hp,
+        beta_alpha,
         N,
         n,
         p,
         r,
+        p_alpha,
         s - 1,
         n.samples,
         n.thin,
@@ -278,20 +300,26 @@ spTm <- function(
         n.threads
       )
       res$params[, p + 1] <- 1 / res$params[, p + 1]
-      ind.sigma <- p + 3 + n + 0:(r-1) * (n + 3)
-      res$params[, ind.sigma] <- 1 / sqrt(res$params[, ind.sigma])
     }
     time <- Sys.time() - time
     
     colnames(res$params) <- 1:ncol(res$params)
     if (is.null(colnames(x))) {
-      colnames(res$params)[1:(p+1)] <- c(paste0("V", 1:p), "sigma")
+      colnames(res$params) <- c(paste0("V", 1:p), "sigma")
     } else {
-      colnames(res$params)[1:(p+1)] <- c(colnames(x), "sigma")
+      colnames(res$params) <- c(colnames(x), "sigma")
     }
+    
+    colnames(res$process) <- 1:ncol(res$process)
     for (m in 1:r) {
-      colnames(res$params)[p+1 + (m - 1) * (n + 3) + 1:(n+3)] <- 
+      if (is.null(colnames(x_alpha[[m]]))) {
+        colnames(x_alpha[[m]]) <- paste0("V", 1:p_alpha[m])
+      }
+      idx <- (m - 1) * (n + mean(p_alpha[1:(m-1)]) + 3) + 1:(n + p_alpha[m] + 3)
+      res$process[,idx[length(idx) - 1]] <- 1 / sqrt(res$process[,idx[length(idx) - 1]])
+      colnames(res$process)[idx] <- 
         c(paste0("beta", m, "(s", 1:n, ")"), 
+          paste0(colnames(x_alpha[[m]]), ",", m),
           paste0(c("mu", "sigma", "phi"), m))
     }
     
@@ -301,8 +329,17 @@ spTm <- function(
       end = n.burnin + n.samples, 
       thin = n.thin)
     
-    z <- list(p.params.samples = res$params)
-    if (length(res) > 1) {
+    res$process <- coda::mcmc(
+      res$process, 
+      start = n.burnin + 1, 
+      end = n.burnin + n.samples, 
+      thin = n.thin)
+    
+    z <- list(
+      p.params.samples = res$params,
+      p.process.samples = res$process
+    )
+    if (!is.null(res$missing)) {
       colnames(res$missing) <- which(!is.finite(y))
       res$missing <- coda::mcmc(
         res$missing, 

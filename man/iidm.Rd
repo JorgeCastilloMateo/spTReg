@@ -11,7 +11,7 @@ iidm(
   na.action,
   method = c("mean", "quantile"),
   quantile = 0.5,
-  priors = list(beta = c(0, 1/100), sigma = c(0.1, 0.1)),
+  priors = list(beta = c(0, 1e-08), sigma = c(0.1, 0.1)),
   starting = list(beta = 0.01, sigma = 1),
   n.samples = 1000,
   n.thin = 1,
@@ -153,9 +153,9 @@ trt <- c(4.81,4.17,4.41,3.59,5.87,3.83,6.03,4.89,4.32,4.69)
 group <- gl(2, 10, 20, labels = c("Ctl","Trt"))
 weight <- c(ctl, trt)
 set.seed(12345)
-iidm.D9 <- iidm(weight ~ group, verbose = FALSE)
+iidm.D9 <- iidm(weight ~ group)
 set.seed(12345)
-iidm.D90 <- iidm(weight ~ group - 1, verbose = FALSE) # omitting intercept
+iidm.D90 <- iidm(weight ~ group - 1) # omitting intercept
 
 }
 \references{

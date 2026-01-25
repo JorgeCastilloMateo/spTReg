@@ -9,12 +9,12 @@ iidQuantileRcpp <- function(tau, Y, X, M, P, ga, gb, beta, prec, N, p, nSims, nT
     .Call('_spTReg_iidQuantileRcpp', PACKAGE = 'spTReg', tau, Y, X, M, P, ga, gb, beta, prec, N, p, nSims, nThin, nBurnin, nReport, parallel, nThreads)
 }
 
-spMeanRcpp <- function(Y, X, U, V, X_alpha, dist, M, P, M_beta_alpha, P_beta_alpha, da, db, ga, gb, na, nb, beta, gamma, alpha, prec, hp, beta_alpha, N, n, p, q, r, p_alpha, s, nSims, nThin, nBurnin, nReport) {
-    .Call('_spTReg_spMeanRcpp', PACKAGE = 'spTReg', Y, X, U, V, X_alpha, dist, M, P, M_beta_alpha, P_beta_alpha, da, db, ga, gb, na, nb, beta, gamma, alpha, prec, hp, beta_alpha, N, n, p, q, r, p_alpha, s, nSims, nThin, nBurnin, nReport)
+spMeanRcpp <- function(Y, X, U, V, X_gamma, X_alpha, dist, M, P, prior_sigma, M_beta_gamma, P_beta_gamma, prior_rho_gamma, prior_sigma_gamma, M_beta_alpha, P_beta_alpha, prior_sigma_alpha, prior_phi_alpha, prior_rho_w, prior_sigma_w, prior_phi_w, beta, prec, gamma, beta_gamma, hp_gamma, alpha, beta_alpha, hp_alpha, Wtls, hp_w, N, n, T, L, p, q, r, p_gamma, p_alpha, wBool, site, year, yday, nSims, nThin, nBurnin, nReport) {
+    .Call('_spTReg_spMeanRcpp', PACKAGE = 'spTReg', Y, X, U, V, X_gamma, X_alpha, dist, M, P, prior_sigma, M_beta_gamma, P_beta_gamma, prior_rho_gamma, prior_sigma_gamma, M_beta_alpha, P_beta_alpha, prior_sigma_alpha, prior_phi_alpha, prior_rho_w, prior_sigma_w, prior_phi_w, beta, prec, gamma, beta_gamma, hp_gamma, alpha, beta_alpha, hp_alpha, Wtls, hp_w, N, n, T, L, p, q, r, p_gamma, p_alpha, wBool, site, year, yday, nSims, nThin, nBurnin, nReport)
 }
 
-spQuantileRcpp <- function(tau, Y, X, V, X_alpha, dist, M, P, M_beta_alpha, P_beta_alpha, da, db, ga, gb, na, nb, beta, alpha, prec, hp, beta_alpha, N, n, p, r, p_alpha, s, nSims, nThin, nBurnin, nReport, parallel, nThreads) {
-    .Call('_spTReg_spQuantileRcpp', PACKAGE = 'spTReg', tau, Y, X, V, X_alpha, dist, M, P, M_beta_alpha, P_beta_alpha, da, db, ga, gb, na, nb, beta, alpha, prec, hp, beta_alpha, N, n, p, r, p_alpha, s, nSims, nThin, nBurnin, nReport, parallel, nThreads)
+spQuantileRcpp <- function(tau, Y, X, U, V, X_gamma, X_alpha, dist, M, P, prior_sigma, M_beta_gamma, P_beta_gamma, prior_rho_gamma, prior_sigma_gamma, M_beta_alpha, P_beta_alpha, prior_sigma_alpha, prior_phi_alpha, prior_rho_w, prior_sigma_w, prior_phi_w, beta, prec, gamma, beta_gamma, hp_gamma, alpha, beta_alpha, hp_alpha, Wtls, hp_w, N, n, T, L, p, q, r, p_gamma, p_alpha, wBool, site, year, yday, nSims, nThin, nBurnin, nReport, parallel, nThreads) {
+    .Call('_spTReg_spQuantileRcpp', PACKAGE = 'spTReg', tau, Y, X, U, V, X_gamma, X_alpha, dist, M, P, prior_sigma, M_beta_gamma, P_beta_gamma, prior_rho_gamma, prior_sigma_gamma, M_beta_alpha, P_beta_alpha, prior_sigma_alpha, prior_phi_alpha, prior_rho_w, prior_sigma_w, prior_phi_w, beta, prec, gamma, beta_gamma, hp_gamma, alpha, beta_alpha, hp_alpha, Wtls, hp_w, N, n, T, L, p, q, r, p_gamma, p_alpha, wBool, site, year, yday, nSims, nThin, nBurnin, nReport, parallel, nThreads)
 }
 
 spTMeanRcpp <- function() {

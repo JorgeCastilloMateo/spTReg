@@ -297,7 +297,7 @@ arma::mat ffbs(
     const arma::mat& Y,       // n x T : observations
     const double rho,         // AR parameter
     const arma::mat& Sigma_w, // state conditional covariance
-    const Rcpp::List& D_list  // list of length T with vec of diag matrices
+    const std::vector<arma::vec>& D_list  // list of length T with vec of diag matrices
 ) {
   const int n = Y.n_rows;
   const int T = Y.n_cols;
@@ -331,7 +331,7 @@ arma::mat ffbs(
     v = Y.col(t-1) - m_ttm1[t];
     
     // Observation noise
-    D = Rcpp::as<arma::vec>(D_list[t-1]);
+    D = D_list[t-1];
     S = P_ttm1[t]; 
     S.diag() += D;
     

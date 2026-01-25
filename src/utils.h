@@ -25,6 +25,7 @@ arma::vec rig(const int N, const arma::vec& mu, const double lambda,
   const bool parallel = false, const int nThreads = 0);
 arma::vec ralRcpp(const arma::vec sigma, const double tau);
 arma::vec RandomMultiNormalC(const arma::mat& Q, const arma::vec& b);
-arma::mat ffbs(const arma::mat& Y, const double rho, const arma::mat& Sigma_w, const Rcpp::List& D_list);
+arma::mat ffbs(const arma::mat& Y, const double rho, const arma::mat& Sigma_w, 
+               const std::vector<arma::vec>& D_list);
     
 #endif

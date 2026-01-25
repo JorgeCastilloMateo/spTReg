@@ -123,9 +123,9 @@
 #' group <- gl(2, 10, 20, labels = c("Ctl","Trt"))
 #' weight <- c(ctl, trt)
 #' set.seed(12345)
-#' iidm.D9 <- iidm(weight ~ group, verbose = FALSE)
+#' iidm.D9 <- iidm(weight ~ group)
 #' set.seed(12345)
-#' iidm.D90 <- iidm(weight ~ group - 1, verbose = FALSE) # omitting intercept
+#' iidm.D90 <- iidm(weight ~ group - 1) # omitting intercept
 #'
 #' @export
 iidm <- function(
@@ -135,7 +135,7 @@ iidm <- function(
   na.action,
   method = c("mean", "quantile"),
   quantile = 0.5,
-  priors = list("beta" = c(0, 1 / 100), "sigma" = c(0.1, 0.1)), 
+  priors = list("beta" = c(0, 1e-08), "sigma" = c(0.1, 0.1)), 
   starting = list("beta" = 0.01, "sigma" = 1), 
   n.samples = 1000, 
   n.thin = 1, 
@@ -158,11 +158,7 @@ iidm <- function(
     (!is.numeric(quantile)) ||
     (quantile <= 0) || (quantile >= 1))
     ) stop("'quantile' should be a number in (0, 1)")
-  if (!all(c("beta", "sigma") %in% names(priors)))
-    stop("'priors' should have the valid tags 'beta' and 'sigma'")
-  if (!all(c("beta", "sigma") %in% names(starting)))
-    stop("'starting' should have the valid tags 'beta' and 'sigma'")
-  
+
   ret.x <- x
   ret.y <- y
   cl <- match.call()
@@ -183,25 +179,10 @@ iidm <- function(
   } else {
     x <- stats::model.matrix(mt, mf)
     p <- ncol(x)
-    if (is.list(priors$beta)) {
-      if (!all(c("M", "P") %in% names(priors$beta)))
-        stop("'priors$beta' should have the valid tags 'M' and 'P'")
-      if (length(priors$beta$M) != p)
-        stop("'priors$beta$M' should have 'length' equal to the number of regression coefficients")
-      if (!all(dim(priors$beta$P) == p))
-        stop("'priors$beta$P' should have both 'dim' equal to the number of regression coefficients")
-    } else {
-      if (length(priors$beta) != 2)
-        stop("'priors$beta' should have 'length' equal to 2")
-      priors$beta <- list("M" = rep(priors$beta[1], p),
-                          "P" = priors$beta[2] * diag(p))
-    }
-    if (!(length(starting$beta) %in% c(1, p)))
-      stop("'starting$beta' should have 'length' equal to 1 or to the number of regression coefficients")
-    if ((length(starting$beta) == 1) && (p != 1))
-      starting$beta <- rep(starting$beta, p)
-    if (length(starting$sigma) != 1)
-      stop("'starting$sigma' should have 'length' equal to 1")
+    
+    priors   <- .check_priors(priors, p)
+    starting <- .check_starting(starting, p)
+    
     if (!verbose) 
       n.report <- 0
     

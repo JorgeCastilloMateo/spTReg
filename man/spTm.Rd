@@ -8,20 +8,23 @@ spTm(
   formula,
   u,
   v,
+  x_gamma,
   x_alpha,
+  w.bool = FALSE,
   data,
   subset,
   na.action,
   method = c("mean", "quantile"),
   quantile = 0.5,
   coords,
-  priors = list(beta = c(0, 1/100), sigma = c(0.1, 0.1), rho = c(0, 1/100), hpGamma =
-    list(sigma = c(0.1, 0.1), rho = c(0, 1/100)), hpAlpha = list(prec0 = 1/100, sigma =
-    c(0.1, 0.1), phi = c(2, 100)), hpSigma = list(mu = 0, sigma = c(0.1, 0.1), phi = c(2,
-    100)), hpRho = list(mu = 0, sigma = c(0.1, 0.1), phi = c(2, 100))),
-  starting = list(beta = 0.01, sigma = 1, rho = 0, gamma = 0, alpha = 0, hpGamma =
-    c(sigma = 1, phi = 3/100), hpAlpha = c(sigma = 1, phi = 3/100), hpSigma = c(mu = 0,
-    sigma = 1, phi = 3/100), hpRho = c(mu = 0, sigma = 1, phi = 3/100)),
+  dates,
+  priors = list(beta = c(0, 1e-08), sigma = c(0.1, 0.1), tp = list(beta = c(0, 1e-08),
+    rho = c(0, 1e-08), sigma = c(0.1, 0.1)), sp = list(beta = c(0, 1e-08), sigma = c(0.1,
+    0.1), phi = c(2, 100)), st = list(rho = c(0, 1e-08), sigma = c(0.1, 0.1), phi = c(2,
+    100))),
+  starting = list(beta = 0.01, sigma = 1, tp = list(tp = 0, beta = 0, rho = 0, sigma =
+    1), sp = list(sp = 0, beta = 0, sigma = 1, phi = 0.01), st = list(st = 0, rho = 0,
+    sigma = 1, phi = 0.01)),
   n.samples = 1000,
   n.thin = 1,
   n.burnin = 1000,
@@ -76,17 +79,6 @@ MCMC progress.}
 
 \item{...}{currently no additional arguments.}
 
-\item{location.fun, ar.fun, scale.fun}{(not working) an object of class 
-\code{\link{formula}} describing a model for each 
-parameter using columns from \code{data}. \code{data} must be supplied if 
-any of these arguments have an explanatory variable. Three options are 
-currently supported for \code{ar.fun}: the default \code{~ -1} with no 
-autoregressive term, \code{~ 1} with a common autoregressive term, and 
-\code{~ sp(1)} with a spatially-varying autoregressive term. Two options 
-are currently supported for \code{scale.fun}: the default \code{~ 1} with 
-a common scale term, and \code{~ sp(1)} with a spatially-varying scale 
-term.}
-
 \item{center.scale}{(not currently available) if \code{TRUE}, non-constant 
 columns of \eqn{X} are 
 centered on zero and scaled to have variance one. If 
@@ -115,7 +107,7 @@ Function currently working but under development.
   
   Model:
   
-  \deqn{\mathbf{Y}_{t\ell} = \mathbf{O}_{t\ell} + \mathbf{P} (\mathbf{Y}_{t,\ell-1} - \mathbf{O}_{t,\ell-1}) + \bm{\epsilon}_{t\ell},}
+  \deqn{\mathbf{Y}_{t\ell} = \mathbf{O}_{t\ell} + \mathbf{P} (\mathbf{Y}_{t,\ell-1} - \mathbf{O}_{t,\ell-1}) + \mathbf{w}_{t\ell} +\bm{\epsilon}_{t\ell},}
   \deqn{\mathbf{O}_{t\ell} = \mathbf{X}_{t\ell} \bm{\beta} + \mathbf{U}_{t\ell} \bm{\gamma}_{t} + \sum_{m=1}^{r} \mathbf{V}_{t\ell,m} \bm{\alpha}_{m},}
   \deqn{\bm{\epsilon}_{t\ell} \sim \text{i.i.d. } N_{n}(\mathbf{0}_{n}, \bm{\Sigma}).}
 

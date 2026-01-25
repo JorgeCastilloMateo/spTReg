@@ -46,18 +46,28 @@ be fitted. The details of model specification are given under ‘Details’.}
 \item{u, v}{(in addition to \code{formula}) \eqn{N \times q} and 
 \eqn{N \times r} matrices of regression variables accompanying a 
 time-varying coefficient and a spatially-varying coefficient, 
-respectively.}
+respectively. (Currently \code{u} not working.)}
+
+\item{x_gamma, x_alpha}{a list with \eqn{q} or \eqn{r} matrices object of 
+regression variables on which to hierarchically center 
+the temporal and spatial coefficients, respectively. The number of columns
+in the matrices should be \eqn{T} and \eqn{n}, respectively. (These 
+matrices can have 0 columns.) (Currently \code{x_gamma} not working.)}
+
+\item{w.bool}{a logical that indicates whether or not to include
+\deqn{\mathbf{w}_{t\ell}} in the model.}
 
 \item{data}{a data frame object with named columns giving the data to be 
 fit; any explanatory variable necessary for modeling any of the 
-parameters; and named columns \code{t}, \code{l}, and \code{s}, 
-representing the numeric index of the data in the long and short 
-temporal scales, and space, respectively; sorted by space. If not found 
+parameters; sorted by space. If not found 
 in \code{data}, the variables are taken from \code{environment(formula)}, 
 typically the environment from which \code{spTm} is called.}
 
 \item{coords}{a \eqn{n \times 2} matrix of the observation coordinates in 
 \code{R^2} (e.g., easting and northing).}
+
+\item{dates}{a vector of class \code{Date} (the data should be grouped by 
+location).}
 
 \item{priors}{a list with each tag corresponding to a parameter name.}
 
@@ -88,10 +98,35 @@ scaling is applied automatically.}
 \value{
 An object of class \code{spTm}, which is a list comprising (this 
   list of outputs must be updated):
-  \item{coords}{the \eqn{n x 2} matrix specified by \code{coords}.}
-  \item{p.params.samples}{A \code{coda} object of posterior samples for the 
-    defined parameters.}
-  \item{acceptance}{The Metropolis sampling acceptance percent.}
+  \item{p.params.samples}{a \code{coda} object of posterior samples for the 
+    model regression and scale parameters, that is \eqn{\bm{\beta}} and 
+    \eqn{\sigma}.}
+  \item{p.tp.samples}{a \code{coda} object of posterior samples for the 
+    temporal parameters, that is \eqn{\bm{\gamma}_t} and their 
+    hyperparameters.}
+  \item{p.sp.samples}{a \code{coda} object of posterior samples for the 
+    spatial parameters, that is \eqn{\bm{\alpha}_m} and their 
+    hyperparameters.}
+  \item{p.st.samples}{a \code{coda} object of posterior samples for the 
+    spatio-temporal parameters, that is \eqn{\mathbf{w}_{t\ell}} and their 
+    hyperparameters.}
+  \item{Y.missing.samples}{a \code{coda} object of posterior samples for the 
+    imputed missing response values.}
+  \item{mcmc}{a list with information of the MCMC chain, that is 
+    \code{n.samples}, \code{n.thin}, \code{n.burnin}, and CPU \code{time} 
+    used.}
+  \item{method}{the method used.}
+  \item{quantile}{if method="quantile", the quantile level used.}
+  \item{rank}{the numeric rank of the fitted linear model.}
+  \item{xlevels}{(where relevant) a record of the levels of the factors
+    used in fitting.}
+  \item{call}{the matched call.}
+  \item{terms}{the \code{\link[stats]{terms}} object used.}
+  \item{y}{if requested, the response used.}
+  \item{x}{if requested, the model matrix used.}
+  \item{model}{if requested (the default), the model frame used.}
+  \item{na.action}{(where relevant) information returned by 
+    \code{\link[stats]{model.frame}} on the special handling of \code{NA}s.}
   
   The return object will include additional objects used for subsequent 
   Gaussian process kriging, data kriging, and model fit evaluation using 
@@ -103,13 +138,19 @@ This function is used to draw MCMC samples using the
   Metropolis-within-Gibbs sampler that fits the Bayesian spatio-temporal
   models.
 
-Function currently working but under development.
+Function working but under development 
+  (currently \eqn{\mathbf{P} = 0} and \eqn{\bm{\gamma}_t = 0}).
   
-  Model:
-  
+  General model:
   \deqn{\mathbf{Y}_{t\ell} = \mathbf{O}_{t\ell} + \mathbf{P} (\mathbf{Y}_{t,\ell-1} - \mathbf{O}_{t,\ell-1}) + \mathbf{w}_{t\ell} +\bm{\epsilon}_{t\ell},}
   \deqn{\mathbf{O}_{t\ell} = \mathbf{X}_{t\ell} \bm{\beta} + \mathbf{U}_{t\ell} \bm{\gamma}_{t} + \sum_{m=1}^{r} \mathbf{V}_{t\ell,m} \bm{\alpha}_{m},}
-  \deqn{\bm{\epsilon}_{t\ell} \sim \text{i.i.d. } N_{n}(\mathbf{0}_{n}, \bm{\Sigma}).}
+  \deqn{\mathbf{w}_{t\ell} = \rho_w \mathbf{w}_{t,\ell-1} + \bm{\delta}_{t\ell}, \quad \bm{\delta}_{t\ell} \sim N_{n}(\mathbf{0}_{n}, \sigma_w^2 \, \mathbf{R}_{\phi_w}),}
+  \deqn{\mathbf{w}_{t1} \sim N_{n}(\mathbf{0}_{n}, \sigma_w^2 \, \mathbf{R}_{\phi_w} / (1 - \rho_w^2)),}
+  with 
+  \eqn{\bm{\epsilon}_{t\ell} \sim \text{i.i.d. } N_{n}(\mathbf{0}_{n}, \sigma^2 \, \mathbf{I}_n)}
+  for the mean, or 
+  \eqn{\bm{\epsilon}_{t\ell} \sim \text{i.i.d. } N_{n}(\mathbf{0}_{n}, \sigma \, \mathbf{I}_n, \tau)}
+  for the \eqn{\tau}-th quantile.
 
   Parallel execution is only available if the package was compiled with 
   \code{OpenMP} support. This mode samples the exponential latent variables 

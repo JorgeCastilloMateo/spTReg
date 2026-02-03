@@ -407,3 +407,33 @@ arma::mat ffbs(
 //  
 //  return { mean, prec, decay };
 //}
+
+// [[Rcpp::export]]
+arma::mat dotW(
+    const arma::mat& R,
+    const arma::vec& Wtls,
+    const std::vector<arma::uvec>& indW,
+    const double rho,
+    const int T,
+    const arma::ivec& L,
+    const double onemrho2
+) {
+  arma::vec wn, vn;
+  arma::mat acc(1, 1, arma::fill::zeros);
+  int col_idx = 0;
+  
+  for (int t = 0; t < T; ++t) {
+    wn = Wtls(indW[col_idx]);
+    vn = wn;
+    acc += onemrho2 * (wn.t() * R * wn);
+    col_idx++;
+    for (int l = 1; l < L(t); ++l) {
+      wn = Wtls(indW[col_idx]) - rho * vn;
+      vn = Wtls(indW[col_idx]);
+      acc += wn.t() * R * wn;
+      col_idx++;
+    }
+  }
+  return acc;
+}
+

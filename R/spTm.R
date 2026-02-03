@@ -456,6 +456,20 @@ spTm <- function(
       n.thin = n.thin, 
       n.burnin = n.burnin, 
       time = time)
+    if (!is.null(res$sp)) {
+      z$mcmc$tuning$sp <- list(
+        "acceptance_rate" = stats::setNames(
+          res$sp.mcmc.r, paste0("phi", 1:r)),
+        "tuned_sd" = stats::setNames(
+          res$sp.mcmc.sd, paste0("phi", 1:r)))
+    }
+    if (!is.null(res$st)) {
+      z$mcmc$tuning$st <- list(
+        "acceptance_rate" = stats::setNames(
+          res$st.mcmc.r, c("rho", "phi")),
+        "tuned_sd" = stats::setNames(
+          res$st.mcmc.sd, "phi"))
+    }
     z$method <- method
   }
   

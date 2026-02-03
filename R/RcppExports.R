@@ -77,3 +77,7 @@ ffbs <- function(Y, rho, Sigma_w, D_list) {
     .Call('_spTReg_ffbs', PACKAGE = 'spTReg', Y, rho, Sigma_w, D_list)
 }
 
+dotW <- function(R, Wtls, indW, rho, T, L, onemrho2) {
+    .Call('_spTReg_dotW', PACKAGE = 'spTReg', R, Wtls, indW, rho, T, L, onemrho2)
+}
+

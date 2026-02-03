@@ -63,7 +63,7 @@ BEGIN_RCPP
 END_RCPP
 }
 // spMeanRcpp
-Rcpp::List spMeanRcpp(arma::vec Y, const arma::mat& X, const arma::mat& U, const arma::mat& V, const std::vector<arma::mat>& X_gamma, const std::vector<arma::mat>& X_alpha, const arma::mat& dist, const arma::vec& M, const arma::mat& P, const arma::vec& prior_sigma, const std::vector<arma::vec>& M_beta_gamma, const std::vector<arma::mat>& P_beta_gamma, const arma::mat& prior_rho_gamma, const arma::mat& prior_sigma_gamma, const std::vector<arma::vec>& M_beta_alpha, const std::vector<arma::mat>& P_beta_alpha, const arma::mat& prior_sigma_alpha, const arma::mat& prior_phi_alpha, const arma::vec& prior_rho_w, const arma::vec& prior_sigma_w, const arma::vec& prior_phi_w, arma::vec beta, double prec, arma::mat gamma, std::vector<arma::vec>& beta_gamma, arma::mat hp_gamma, arma::mat alpha, std::vector<arma::vec>& beta_alpha, arma::mat hp_alpha, arma::vec Wtls, arma::vec hp_w, const int N, const int n, const int T, const arma::vec& L, const int p, const int q, const int r, const arma::vec& p_gamma, const arma::vec& p_alpha, const bool wBool, const arma::uvec& site, const arma::uvec& year, const arma::uvec& yday, const int nSims, const int nThin, const int nBurnin, const int nReport);
+Rcpp::List spMeanRcpp(arma::vec Y, const arma::mat& X, const arma::mat& U, const arma::mat& V, const std::vector<arma::mat>& X_gamma, const std::vector<arma::mat>& X_alpha, const arma::mat& dist, const arma::vec& M, const arma::mat& P, const arma::vec& prior_sigma, const std::vector<arma::vec>& M_beta_gamma, const std::vector<arma::mat>& P_beta_gamma, const arma::mat& prior_rho_gamma, const arma::mat& prior_sigma_gamma, const std::vector<arma::vec>& M_beta_alpha, const std::vector<arma::mat>& P_beta_alpha, const arma::mat& prior_sigma_alpha, const arma::mat& prior_phi_alpha, const arma::vec& prior_rho_w, const arma::vec& prior_sigma_w, const arma::vec& prior_phi_w, arma::vec beta, double prec, arma::mat gamma, std::vector<arma::vec>& beta_gamma, arma::mat hp_gamma, arma::mat alpha, std::vector<arma::vec>& beta_alpha, arma::mat hp_alpha, arma::vec Wtls, arma::vec hp_w, const int N, const int n, const int T, const arma::ivec& L, const int p, const int q, const int r, const arma::vec& p_gamma, const arma::vec& p_alpha, const bool wBool, const arma::uvec& site, const arma::uvec& year, const arma::uvec& yday, const int nSims, const int nThin, const int nBurnin, const int nReport);
 RcppExport SEXP _spTReg_spMeanRcpp(SEXP YSEXP, SEXP XSEXP, SEXP USEXP, SEXP VSEXP, SEXP X_gammaSEXP, SEXP X_alphaSEXP, SEXP distSEXP, SEXP MSEXP, SEXP PSEXP, SEXP prior_sigmaSEXP, SEXP M_beta_gammaSEXP, SEXP P_beta_gammaSEXP, SEXP prior_rho_gammaSEXP, SEXP prior_sigma_gammaSEXP, SEXP M_beta_alphaSEXP, SEXP P_beta_alphaSEXP, SEXP prior_sigma_alphaSEXP, SEXP prior_phi_alphaSEXP, SEXP prior_rho_wSEXP, SEXP prior_sigma_wSEXP, SEXP prior_phi_wSEXP, SEXP betaSEXP, SEXP precSEXP, SEXP gammaSEXP, SEXP beta_gammaSEXP, SEXP hp_gammaSEXP, SEXP alphaSEXP, SEXP beta_alphaSEXP, SEXP hp_alphaSEXP, SEXP WtlsSEXP, SEXP hp_wSEXP, SEXP NSEXP, SEXP nSEXP, SEXP TSEXP, SEXP LSEXP, SEXP pSEXP, SEXP qSEXP, SEXP rSEXP, SEXP p_gammaSEXP, SEXP p_alphaSEXP, SEXP wBoolSEXP, SEXP siteSEXP, SEXP yearSEXP, SEXP ydaySEXP, SEXP nSimsSEXP, SEXP nThinSEXP, SEXP nBurninSEXP, SEXP nReportSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
@@ -102,7 +102,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const int >::type N(NSEXP);
     Rcpp::traits::input_parameter< const int >::type n(nSEXP);
     Rcpp::traits::input_parameter< const int >::type T(TSEXP);
-    Rcpp::traits::input_parameter< const arma::vec& >::type L(LSEXP);
+    Rcpp::traits::input_parameter< const arma::ivec& >::type L(LSEXP);
     Rcpp::traits::input_parameter< const int >::type p(pSEXP);
     Rcpp::traits::input_parameter< const int >::type q(qSEXP);
     Rcpp::traits::input_parameter< const int >::type r(rSEXP);
@@ -121,7 +121,7 @@ BEGIN_RCPP
 END_RCPP
 }
 // spQuantileRcpp
-Rcpp::List spQuantileRcpp(const double tau, arma::vec Y, const arma::mat& X, const arma::mat& U, const arma::mat& V, const std::vector<arma::mat>& X_gamma, const std::vector<arma::mat>& X_alpha, const arma::mat& dist, const arma::vec& M, const arma::mat& P, const arma::vec& prior_sigma, const std::vector<arma::vec>& M_beta_gamma, const std::vector<arma::mat>& P_beta_gamma, const arma::mat& prior_rho_gamma, const arma::mat& prior_sigma_gamma, const std::vector<arma::vec>& M_beta_alpha, const std::vector<arma::mat>& P_beta_alpha, const arma::mat& prior_sigma_alpha, const arma::mat& prior_phi_alpha, const arma::vec& prior_rho_w, const arma::vec& prior_sigma_w, const arma::vec& prior_phi_w, arma::vec beta, double prec, arma::mat gamma, std::vector<arma::vec>& beta_gamma, arma::mat hp_gamma, arma::mat alpha, std::vector<arma::vec>& beta_alpha, arma::mat hp_alpha, arma::vec Wtls, arma::vec hp_w, const int N, const int n, const int T, const arma::vec& L, const int p, const int q, const int r, const arma::vec& p_gamma, const arma::vec& p_alpha, const bool wBool, const arma::uvec& site, const arma::uvec& year, const arma::uvec& yday, const int nSims, const int nThin, const int nBurnin, const int nReport, const bool parallel, const int nThreads);
+Rcpp::List spQuantileRcpp(const double tau, arma::vec Y, const arma::mat& X, const arma::mat& U, const arma::mat& V, const std::vector<arma::mat>& X_gamma, const std::vector<arma::mat>& X_alpha, const arma::mat& dist, const arma::vec& M, const arma::mat& P, const arma::vec& prior_sigma, const std::vector<arma::vec>& M_beta_gamma, const std::vector<arma::mat>& P_beta_gamma, const arma::mat& prior_rho_gamma, const arma::mat& prior_sigma_gamma, const std::vector<arma::vec>& M_beta_alpha, const std::vector<arma::mat>& P_beta_alpha, const arma::mat& prior_sigma_alpha, const arma::mat& prior_phi_alpha, const arma::vec& prior_rho_w, const arma::vec& prior_sigma_w, const arma::vec& prior_phi_w, arma::vec beta, double prec, arma::mat gamma, std::vector<arma::vec>& beta_gamma, arma::mat hp_gamma, arma::mat alpha, std::vector<arma::vec>& beta_alpha, arma::mat hp_alpha, arma::vec Wtls, arma::vec hp_w, const int N, const int n, const int T, const arma::ivec& L, const int p, const int q, const int r, const arma::vec& p_gamma, const arma::vec& p_alpha, const bool wBool, const arma::uvec& site, const arma::uvec& year, const arma::uvec& yday, const int nSims, const int nThin, const int nBurnin, const int nReport, const bool parallel, const int nThreads);
 RcppExport SEXP _spTReg_spQuantileRcpp(SEXP tauSEXP, SEXP YSEXP, SEXP XSEXP, SEXP USEXP, SEXP VSEXP, SEXP X_gammaSEXP, SEXP X_alphaSEXP, SEXP distSEXP, SEXP MSEXP, SEXP PSEXP, SEXP prior_sigmaSEXP, SEXP M_beta_gammaSEXP, SEXP P_beta_gammaSEXP, SEXP prior_rho_gammaSEXP, SEXP prior_sigma_gammaSEXP, SEXP M_beta_alphaSEXP, SEXP P_beta_alphaSEXP, SEXP prior_sigma_alphaSEXP, SEXP prior_phi_alphaSEXP, SEXP prior_rho_wSEXP, SEXP prior_sigma_wSEXP, SEXP prior_phi_wSEXP, SEXP betaSEXP, SEXP precSEXP, SEXP gammaSEXP, SEXP beta_gammaSEXP, SEXP hp_gammaSEXP, SEXP alphaSEXP, SEXP beta_alphaSEXP, SEXP hp_alphaSEXP, SEXP WtlsSEXP, SEXP hp_wSEXP, SEXP NSEXP, SEXP nSEXP, SEXP TSEXP, SEXP LSEXP, SEXP pSEXP, SEXP qSEXP, SEXP rSEXP, SEXP p_gammaSEXP, SEXP p_alphaSEXP, SEXP wBoolSEXP, SEXP siteSEXP, SEXP yearSEXP, SEXP ydaySEXP, SEXP nSimsSEXP, SEXP nThinSEXP, SEXP nBurninSEXP, SEXP nReportSEXP, SEXP parallelSEXP, SEXP nThreadsSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
@@ -161,7 +161,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const int >::type N(NSEXP);
     Rcpp::traits::input_parameter< const int >::type n(nSEXP);
     Rcpp::traits::input_parameter< const int >::type T(TSEXP);
-    Rcpp::traits::input_parameter< const arma::vec& >::type L(LSEXP);
+    Rcpp::traits::input_parameter< const arma::ivec& >::type L(LSEXP);
     Rcpp::traits::input_parameter< const int >::type p(pSEXP);
     Rcpp::traits::input_parameter< const int >::type q(qSEXP);
     Rcpp::traits::input_parameter< const int >::type r(rSEXP);
@@ -373,6 +373,23 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// dotW
+arma::mat dotW(const arma::mat& R, const arma::vec& Wtls, const std::vector<arma::uvec>& indW, const double rho, const int T, const arma::ivec& L, const double onemrho2);
+RcppExport SEXP _spTReg_dotW(SEXP RSEXP, SEXP WtlsSEXP, SEXP indWSEXP, SEXP rhoSEXP, SEXP TSEXP, SEXP LSEXP, SEXP onemrho2SEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type R(RSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type Wtls(WtlsSEXP);
+    Rcpp::traits::input_parameter< const std::vector<arma::uvec>& >::type indW(indWSEXP);
+    Rcpp::traits::input_parameter< const double >::type rho(rhoSEXP);
+    Rcpp::traits::input_parameter< const int >::type T(TSEXP);
+    Rcpp::traits::input_parameter< const arma::ivec& >::type L(LSEXP);
+    Rcpp::traits::input_parameter< const double >::type onemrho2(onemrho2SEXP);
+    rcpp_result_gen = Rcpp::wrap(dotW(R, Wtls, indW, rho, T, L, onemrho2));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_spTReg_iidMeanRcpp", (DL_FUNC) &_spTReg_iidMeanRcpp, 14},
@@ -394,6 +411,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_spTReg_ralRcpp", (DL_FUNC) &_spTReg_ralRcpp, 2},
     {"_spTReg_RandomMultiNormalC", (DL_FUNC) &_spTReg_RandomMultiNormalC, 2},
     {"_spTReg_ffbs", (DL_FUNC) &_spTReg_ffbs, 4},
+    {"_spTReg_dotW", (DL_FUNC) &_spTReg_dotW, 7},
     {NULL, NULL, 0}
 };
 

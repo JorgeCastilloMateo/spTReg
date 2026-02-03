@@ -27,5 +27,8 @@ arma::vec ralRcpp(const arma::vec sigma, const double tau);
 arma::vec RandomMultiNormalC(const arma::mat& Q, const arma::vec& b);
 arma::mat ffbs(const arma::mat& Y, const double rho, const arma::mat& Sigma_w, 
                const std::vector<arma::vec>& D_list);
+arma::mat dotW(const arma::mat& R, const arma::vec& Wtls,
+               const std::vector<arma::uvec>& indW, const double rho, 
+               const int T, const arma::ivec& L, const double onemrho2);
     
 #endif

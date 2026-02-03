@@ -260,7 +260,7 @@ Rcpp::List spMeanRcpp(
     const int N,           // constants
     const int n,
     const int T,
-    const arma::vec& L,
+    const arma::ivec& L,
     const int p,
     const int q,
     const int r,
@@ -324,6 +324,8 @@ Rcpp::List spMeanRcpp(
   arma::vec V_block(Ndn), e_block(Ndn);
   
   // aux decay
+  bool ok;
+  
   int total = 0;
   arma::vec accept(r, arma::fill::zeros);
   arma::vec ratio(r);
@@ -358,7 +360,7 @@ Rcpp::List spMeanRcpp(
   arma::mat S_aux(n, n);
   arma::mat S_w(n, n);
   arma::mat R_w(n, n);
-  double Rlogdet_w;
+  double Rlogdet_w = 0.0;
   
   if (wBool) {
     S_w = exp(- hp_w(2) * dist);
@@ -471,26 +473,30 @@ Rcpp::List spMeanRcpp(
         Xb_alpha[m] = X_alpha[m] * beta_alpha[m];
       }
       
-      // decay
-      ldecay_aux  = R::rnorm(ldecay(m), sd(m));
-      decay_aux   = exp(ldecay_aux);
-      R_aux       = arma::inv_sympd(exp(- decay_aux * dist));
-      Rlogdet_aux = arma::log_det_sympd(R_aux);
-      vn       = alpha_m - Xb_alpha[m];
-      vtRv_aux = arma::as_scalar(vn.t() * R_aux * vn);
-      vtRv     = arma::as_scalar(vn.t() * R.slice(m) * vn);
-      ALPHA = 
-        0.5 * (Rlogdet_aux - Rlogdet(m) + 
+      // phi
+      vn   = alpha_m - Xb_alpha[m];
+      vtRv = arma::as_scalar(vn.t() * R.slice(m) * vn);
+      
+      ldecay_aux = R::rnorm(ldecay(m), sd(m));
+      decay_aux = exp(ldecay_aux);
+      S_aux = exp(- decay_aux * dist);
+      ok = arma::inv_sympd(R_aux, S_aux);
+      if (ok) ok = arma::log_det_sympd(Rlogdet_aux, R_aux);
+      if (ok) {
+        vtRv_aux = arma::as_scalar(vn.t() * R_aux * vn);
+        ALPHA = 
+          0.5 * (Rlogdet_aux - Rlogdet(m) + 
           hp_alpha(0, m) * (vtRv - vtRv_aux)) +
-        prior_phi_alpha(0, m) * (ldecay_aux - ldecay(m)) + 
-        prior_phi_alpha(1, m) * (hp_alpha(1, m) - decay_aux);
-      if (log(R::runif(0, 1)) < ALPHA) {
-        ++accept(m);
-        hp_alpha(1, m) = decay_aux;
-        ldecay(m) = ldecay_aux;
-        R.slice(m) = R_aux;
-        Rlogdet(m) = Rlogdet_aux;
-        vtRv = vtRv_aux;
+          prior_phi_alpha(0, m) * (ldecay_aux - ldecay(m)) + 
+          prior_phi_alpha(1, m) * (hp_alpha(1, m) - decay_aux);
+        if (log(R::runif(0, 1)) < ALPHA) {
+          ++accept(m);
+          ldecay(m) = ldecay_aux;
+          hp_alpha(1, m) = decay_aux;
+          R.slice(m) = R_aux;
+          Rlogdet(m) = Rlogdet_aux;
+          vtRv = vtRv_aux;
+        }
       }
       
       // prec
@@ -525,44 +531,29 @@ Rcpp::List spMeanRcpp(
       e -= Wtls;
       
       //// phi_w
+      wtRw = dotW(R_w, Wtls, indW, hp_w(0), T, L, onemrho2);
+      
       ldecay_aux  = R::rnorm(ldecay_w, sd_w);
       decay_aux   = exp(ldecay_aux);
       S_aux       = exp(- decay_aux * dist);
-      R_aux       = arma::inv_sympd(S_aux);
-      Rlogdet_aux = arma::log_det_sympd(R_aux);
-      
-      wtRw_aux.zeros(); 
-      wtRw.zeros();
-      col_idx = 0;
-      for (int t = 0; t < T; ++t) {
-        wn = Wtls(indW[col_idx]);
-        vn = wn;
-        wtRw_aux += onemrho2 * wn.t() * R_aux * wn;
-        wtRw     += onemrho2 * wn.t() * R_w * wn;
-        col_idx++;
-        for (int l = 1; l < L(t); ++l) {
-          wn = Wtls(indW[col_idx]) - hp_w(0) * vn; // e_w = ... // w[- l == 1] - rho_w * w[- l == L];
-          vn = Wtls(indW[col_idx]);
-          wtRw_aux += wn.t() * R_aux * wn;
-          wtRw     += wn.t() * R_w * wn;
-          col_idx++;
+      ok = arma::inv_sympd(R_aux, S_aux);
+      if (ok) ok = arma::log_det_sympd(Rlogdet_aux, R_aux);
+      if (ok) {
+        wtRw_aux = dotW(R_aux, Wtls, indW, hp_w(0), T, L, onemrho2); 
+        ALPHA = 
+          0.5 * (Ndn * (Rlogdet_aux - Rlogdet_w) +
+          hp_w(1) * arma::as_scalar(wtRw - wtRw_aux)) + 
+          prior_phi_w(0) * (ldecay_aux - ldecay_w) - 
+          prior_phi_w(1) * (decay_aux - hp_w(2));
+        if (log(R::runif(0, 1)) < ALPHA) {
+          ++accept_w(1);
+          ldecay_w = ldecay_aux;
+          hp_w(2) = decay_aux;
+          S_w = S_aux;
+          R_w = R_aux;
+          Rlogdet_w = Rlogdet_aux;
+          wtRw = wtRw_aux;
         }
-      }
-      
-      ALPHA = 
-        0.5 * (Ndn * (Rlogdet_aux - Rlogdet_w) +
-        hp_w(1) * arma::as_scalar(wtRw - wtRw_aux)) + 
-        prior_phi_w(0) * (ldecay_aux - ldecay_w) - 
-        prior_phi_w(1) * (decay_aux - hp_w(2));
-      
-      if (log(R::runif(0, 1)) < ALPHA) {
-        ++accept_w(1);
-        hp_w(2) = decay_aux;
-        ldecay_w = ldecay_aux;
-        S_w = S_aux;
-        R_w = R_aux;
-        Rlogdet_w = Rlogdet_aux;
-        wtRw = wtRw_aux;
       }
       
       //// prec_w
@@ -678,8 +669,16 @@ Rcpp::List spMeanRcpp(
   Rcpp::List out = Rcpp::List::create(
     Rcpp::Named("params") = keep);
   
-  if (r > 0) out["sp"] = keep_sp;
-  if (wBool) out["st"] = keep_st;
+  if (r > 0) {
+    out["sp"] = keep_sp;
+    out["sp.mcmc.sd"] = sd;
+    out["sp.mcmc.r"] = ratio;
+  } 
+  if (wBool) {
+    out["st"] = keep_st;
+    out["st.mcmc.sd"] = sd_w;
+    out["st.mcmc.r"] = ratio_w;
+  }
   if (missing_n != 0) out["missing"] = keep_Y;
   
   return out;
@@ -723,7 +722,7 @@ Rcpp::List spQuantileRcpp(
     const int N,          // constants
     const int n,
     const int T,
-    const arma::vec& L,
+    const arma::ivec& L,
     const int p,
     const int q,
     const int r,
@@ -799,6 +798,8 @@ Rcpp::List spQuantileRcpp(
   arma::vec c2dxi_block(Ndn), V_c2dxi_block(Ndn);
   
   // aux decay
+  bool ok;
+  
   int total = 0;
   arma::vec accept(r, arma::fill::zeros);
   arma::vec ratio(r);
@@ -833,7 +834,7 @@ Rcpp::List spQuantileRcpp(
   arma::mat S_aux(n, n);
   arma::mat S_w(n, n);
   arma::mat R_w(n, n);
-  double Rlogdet_w;
+  double Rlogdet_w = 0.0;
   
   if (wBool) {
     S_w = exp(- hp_w(2) * dist);
@@ -947,26 +948,30 @@ Rcpp::List spQuantileRcpp(
         Xb_alpha[m] = X_alpha[m] * beta_alpha[m];
       }
       
-      // decay
-      ldecay_aux  = R::rnorm(ldecay(m), sd(m));
-      decay_aux   = exp(ldecay_aux);
-      R_aux       = arma::inv_sympd(exp(- decay_aux * dist));
-      Rlogdet_aux = arma::log_det_sympd(R_aux);
-      vn       = alpha_m - Xb_alpha[m];
-      vtRv_aux = arma::as_scalar(vn.t() * R_aux * vn);
-      vtRv     = arma::as_scalar(vn.t() * R.slice(m) * vn);
-      ALPHA = 
-        0.5 * (Rlogdet_aux - Rlogdet(m) + 
+      // phi
+      vn   = alpha_m - Xb_alpha[m];
+      vtRv = arma::as_scalar(vn.t() * R.slice(m) * vn);
+      
+      ldecay_aux = R::rnorm(ldecay(m), sd(m));
+      decay_aux = exp(ldecay_aux);
+      S_aux = exp(- decay_aux * dist);
+      ok = arma::inv_sympd(R_aux, S_aux);
+      if (ok) ok = arma::log_det_sympd(Rlogdet_aux, R_aux);
+      if (ok) {
+        vtRv_aux = arma::as_scalar(vn.t() * R_aux * vn);
+        ALPHA = 
+          0.5 * (Rlogdet_aux - Rlogdet(m) + 
           hp_alpha(0, m) * (vtRv - vtRv_aux)) +
-        prior_phi_alpha(0, m) * (ldecay_aux - ldecay(m)) + 
-        prior_phi_alpha(1, m) * (hp_alpha(1, m) - decay_aux);
-      if (log(R::runif(0, 1)) < ALPHA) {
-        ++accept(m);
-        hp_alpha(1, m) = decay_aux;
-        ldecay(m) = ldecay_aux;
-        R.slice(m) = R_aux;
-        Rlogdet(m) = Rlogdet_aux;
-        vtRv = vtRv_aux;
+          prior_phi_alpha(0, m) * (ldecay_aux - ldecay(m)) + 
+          prior_phi_alpha(1, m) * (hp_alpha(1, m) - decay_aux);
+        if (log(R::runif(0, 1)) < ALPHA) {
+          ++accept(m);
+          ldecay(m) = ldecay_aux;
+          hp_alpha(1, m) = decay_aux;
+          R.slice(m) = R_aux;
+          Rlogdet(m) = Rlogdet_aux;
+          vtRv = vtRv_aux;
+        }
       }
       
       // prec
@@ -1001,44 +1006,29 @@ Rcpp::List spQuantileRcpp(
       e -= Wtls;
       
       //// phi_w
+      wtRw = dotW(R_w, Wtls, indW, hp_w(0), T, L, onemrho2);
+      
       ldecay_aux  = R::rnorm(ldecay_w, sd_w);
       decay_aux   = exp(ldecay_aux);
       S_aux       = exp(- decay_aux * dist);
-      R_aux       = arma::inv_sympd(S_aux);
-      Rlogdet_aux = arma::log_det_sympd(R_aux);
-      
-      wtRw_aux.zeros(); 
-      wtRw.zeros();
-      col_idx = 0;
-      for (int t = 0; t < T; ++t) {
-        wn = Wtls(indW[col_idx]);
-        vn = wn;
-        wtRw_aux += onemrho2 * wn.t() * R_aux * wn;
-        wtRw     += onemrho2 * wn.t() * R_w * wn;
-        col_idx++;
-        for (int l = 1; l < L(t); ++l) {
-          wn = Wtls(indW[col_idx]) - hp_w(0) * vn; // e_w = ... // w[- l == 1] - rho_w * w[- l == L];
-          vn = Wtls(indW[col_idx]);
-          wtRw_aux += wn.t() * R_aux * wn;
-          wtRw     += wn.t() * R_w * wn;
-          col_idx++;
+      ok = arma::inv_sympd(R_aux, S_aux);
+      if (ok) ok = arma::log_det_sympd(Rlogdet_aux, R_aux);
+      if (ok) {
+        wtRw_aux = dotW(R_aux, Wtls, indW, hp_w(0), T, L, onemrho2);
+        ALPHA = 
+          0.5 * (Ndn * (Rlogdet_aux - Rlogdet_w) +
+          hp_w(1) * arma::as_scalar(wtRw - wtRw_aux)) + 
+          prior_phi_w(0) * (ldecay_aux - ldecay_w) - 
+          prior_phi_w(1) * (decay_aux - hp_w(2));
+        if (log(R::runif(0, 1)) < ALPHA) {
+          ++accept_w(1);
+          ldecay_w = ldecay_aux;
+          hp_w(2) = decay_aux;
+          S_w = S_aux;
+          R_w = R_aux;
+          Rlogdet_w = Rlogdet_aux;
+          wtRw = wtRw_aux;
         }
-      }
-      
-      ALPHA = 
-        0.5 * (Ndn * (Rlogdet_aux - Rlogdet_w) +
-        hp_w(1) * arma::as_scalar(wtRw - wtRw_aux)) + 
-        prior_phi_w(0) * (ldecay_aux - ldecay_w) - 
-        prior_phi_w(1) * (decay_aux - hp_w(2));
-      
-      if (log(R::runif(0, 1)) < ALPHA) {
-        ++accept_w(1);
-        hp_w(2) = decay_aux;
-        ldecay_w = ldecay_aux;
-        S_w = S_aux;
-        R_w = R_aux;
-        Rlogdet_w = Rlogdet_aux;
-        wtRw = wtRw_aux;
       }
       
       //// prec_w
@@ -1155,8 +1145,16 @@ Rcpp::List spQuantileRcpp(
   Rcpp::List out = Rcpp::List::create(
     Rcpp::Named("params") = keep);
 
-  if (r > 0) out["sp"] = keep_sp;
-  if (wBool) out["st"] = keep_st;
+  if (r > 0) {
+    out["sp"] = keep_sp;
+    out["sp.mcmc.sd"] = sd;
+    out["sp.mcmc.r"] = ratio;
+  } 
+  if (wBool) {
+    out["st"] = keep_st;
+    out["st.mcmc.sd"] = sd_w;
+    out["st.mcmc.r"] = ratio_w;
+  } 
   if (missing_n != 0) out["missing"] = keep_Y;
 
   return out;

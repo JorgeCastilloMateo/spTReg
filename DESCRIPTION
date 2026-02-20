@@ -1,8 +1,8 @@
 Package: spTReg
 Type: Package
 Title: Spatio-Temporal Mean, Quantile, and Binary auto-Regression Models
-Version: 0.0.0-15
-Date: 2026-02-03
+Version: 0.0.0-16
+Date: 2026-02-20
 Authors@R: c(
   person("Jorge", "Castillo-Mateo", role = c("aut","cre","cph"), email = "jorgecastillomateo@gmail.com", comment = c(ORCID = "0000-0003-3859-0248"))
   )

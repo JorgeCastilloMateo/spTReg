@@ -301,6 +301,8 @@ arma::mat ffbs(
 ) {
   const int n = Y.n_rows;
   const int T = Y.n_cols;
+  arma::mat I = arma::eye(n, n);
+  arma::mat R(n, n);
   
   // Output: states w_{1:T}
   arma::mat W(n, T);
@@ -326,6 +328,7 @@ arma::mat ffbs(
     // Predict
     m_ttm1[t] = rho * m_tt[t-1];
     P_ttm1[t] = rho*rho * P_tt[t-1] + Sigma_w;
+    // P_ttm1[t] = 0.5 * (P_ttm1[t] + P_ttm1[t].t());
     
     // Innovation
     v = Y.col(t-1) - m_ttm1[t];
@@ -334,14 +337,17 @@ arma::mat ffbs(
     D = D_list[t-1];
     S = P_ttm1[t]; 
     S.diag() += D;
+    R = arma::diagmat(D);
     
     // Compute Kalman gain: K = P_ttm1 * S^{-1}
     // K = P_ttm1[t] * arma::inv_sympd(S);
-    K = arma::solve(S, P_ttm1[t], arma::solve_opts::fast).t();
+    K = arma::solve(S, P_ttm1[t], arma::solve_opts::likely_sympd).t();
     
     // Update
     m_tt[t] = m_ttm1[t] + K * v;
-    P_tt[t] = P_ttm1[t] - K * S * K.t();
+    // P_tt[t] = P_ttm1[t] - K * S * K.t();
+    P_tt[t] = (I - K) * P_ttm1[t] * (I - K).t() + K * R * K.t();
+    // P_tt[t] = 0.5 * (P_tt[t] + P_tt[t].t());
   }
   
   // ---- BACKWARD SAMPLING ----
@@ -353,11 +359,13 @@ arma::mat ffbs(
     
     // J_t = rho P_{t|t} * P_{t+1|t}^{-1}
     // J = rho * P_tt[t] * arma::inv_sympd(P_ttm1[t+1]);
-    J = arma::solve(P_ttm1[t+1], rho * P_tt[t], arma::solve_opts::fast).t();
+    J = arma::solve(P_ttm1[t+1], rho * P_tt[t], arma::solve_opts::likely_sympd).t();
     
     // Conditional mean/covariance
     mu = m_tt[t] + J * (W.col(t) - m_ttm1[t+1]);
     Sigma = P_tt[t] - J * P_ttm1[t+1] * J.t();
+    // Sigma = 0.5 * (Sigma + Sigma.t());
+    // Sigma.diag() += 1e-8;
     
     // Sample
     W.col(t-1) = mu + arma::chol(Sigma, "lower") * arma::randn(n);

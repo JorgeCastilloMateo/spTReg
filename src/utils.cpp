@@ -328,7 +328,7 @@ arma::mat ffbs(
     // Predict
     m_ttm1[t] = rho * m_tt[t-1];
     P_ttm1[t] = rho*rho * P_tt[t-1] + Sigma_w;
-    // P_ttm1[t] = 0.5 * (P_ttm1[t] + P_ttm1[t].t());
+    P_ttm1[t] = 0.5 * (P_ttm1[t] + P_ttm1[t].t());
     
     // Innovation
     v = Y.col(t-1) - m_ttm1[t];
@@ -347,7 +347,7 @@ arma::mat ffbs(
     m_tt[t] = m_ttm1[t] + K * v;
     // P_tt[t] = P_ttm1[t] - K * S * K.t();
     P_tt[t] = (I - K) * P_ttm1[t] * (I - K).t() + K * R * K.t();
-    // P_tt[t] = 0.5 * (P_tt[t] + P_tt[t].t());
+    P_tt[t] = 0.5 * (P_tt[t] + P_tt[t].t());
   }
   
   // ---- BACKWARD SAMPLING ----
@@ -364,7 +364,7 @@ arma::mat ffbs(
     // Conditional mean/covariance
     mu = m_tt[t] + J * (W.col(t) - m_ttm1[t+1]);
     Sigma = P_tt[t] - J * P_ttm1[t+1] * J.t();
-    // Sigma = 0.5 * (Sigma + Sigma.t());
+    Sigma = 0.5 * (Sigma + Sigma.t());
     // Sigma.diag() += 1e-8;
     
     // Sample

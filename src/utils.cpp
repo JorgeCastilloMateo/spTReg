@@ -302,7 +302,6 @@ arma::mat ffbs(
   const int n = Y.n_rows;
   const int T = Y.n_cols;
   arma::mat I = arma::eye(n, n);
-  arma::mat R(n, n);
   
   // Output: states w_{1:T}
   arma::mat W(n, T);
@@ -319,7 +318,7 @@ arma::mat ffbs(
   
   // aux
   arma::vec v(n), D(n), mu(n);
-  arma::mat S(n,n), K(n,n);
+  arma::mat S(n,n), K(n,n), ImK(n,n);
   arma::mat J(n,n), Sigma(n,n);
   
   // ---- FORWARD FILTERING ----
@@ -337,8 +336,7 @@ arma::mat ffbs(
     D = D_list[t-1];
     S = P_ttm1[t]; 
     S.diag() += D;
-    R = arma::diagmat(D);
-    
+
     // Compute Kalman gain: K = P_ttm1 * S^{-1}
     // K = P_ttm1[t] * arma::inv_sympd(S);
     K = arma::solve(S, P_ttm1[t], arma::solve_opts::likely_sympd).t();
@@ -346,7 +344,8 @@ arma::mat ffbs(
     // Update
     m_tt[t] = m_ttm1[t] + K * v;
     // P_tt[t] = P_ttm1[t] - K * S * K.t();
-    P_tt[t] = (I - K) * P_ttm1[t] * (I - K).t() + K * R * K.t();
+    ImK = I - K;
+    P_tt[t] = ImK * P_ttm1[t] * ImK.t() + (K.each_row() % D.t()) * K.t();
     P_tt[t] = 0.5 * (P_tt[t] + P_tt[t].t());
   }
   

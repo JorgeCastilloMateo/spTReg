@@ -296,7 +296,12 @@ Rcpp::List spMeanRcpp(
   }
   
   // residual
-  arma::vec Xb = X * beta;
+  arma::vec Xb;
+  if (p > 0) {
+    Xb = X * beta;
+  } else {
+    Xb = arma::zeros<arma::vec>(N);
+  }
   arma::vec e = Y - Xb;
   arma::vec alpha_m(n);
   arma::vec V_m(N);
@@ -902,7 +907,12 @@ Rcpp::List spQuantileRcpp(
   arma::vec xi(N, arma::fill::ones);
   
   // residual
-  arma::vec Xb = X * beta;
+  arma::vec Xb;
+  if (p > 0) {
+    Xb = X * beta;
+  } else {
+    Xb = arma::zeros<arma::vec>(N);
+  }
   arma::vec e  = Y - Xb - c1 * xi;
   arma::vec alpha_m(n);
   arma::vec V_m(N);

@@ -314,7 +314,6 @@ Rcpp::List spMeanRcpp(
     } else {
       Xb_alpha[m] = arma::vec(n, arma::fill::zeros);
     }
-      
   }
   
   // aux GP
@@ -449,12 +448,14 @@ Rcpp::List spMeanRcpp(
                    (iter > 0 ? iter / nThin : 0), start_time);
     
     // beta
-    e += Xb;
-    Qp = P  + prec * XtX;
-    bp = PM + prec * Xt * e;
-    beta = RandomMultiNormalC(Qp, bp);
-    Xb = X * beta;
-    e -= Xb;
+    if (p > 0) {
+      e += Xb;
+      Qp = P  + prec * XtX;
+      bp = PM + prec * Xt * e;
+      beta = RandomMultiNormalC(Qp, bp);
+      Xb = X * beta;
+      e -= Xb;
+    }
     
     // gamma t = 0,1,...,T-1,T
     //if (q > 0) {
@@ -775,7 +776,9 @@ Rcpp::List spMeanRcpp(
     
     // keep
     if (iter > 0 && iter % nThin == 0) {
-      keep(save_idx, arma::span(0, p - 1)) = beta.t();
+      if (p > 0) {
+        keep(save_idx, arma::span(0, p - 1)) = beta.t();
+      }
       keep(save_idx, p) = prec;
       
       nCols2 = 0;
@@ -917,7 +920,6 @@ Rcpp::List spQuantileRcpp(
     } else {
       Xb_alpha[m] = arma::vec(n, arma::fill::zeros);
     }
-      
   }
   
   // aux GP
@@ -1059,17 +1061,19 @@ Rcpp::List spQuantileRcpp(
     e -= c1 * xi;
     
     // beta
-    e += Xb;
-    Qp = P;
-    bp = PM;
-    for (int i = 0; i < N; ++i) {
-      Xaux = prec * c2dxi(i) * X.row(i).t();
-      Qp += Xaux * X.row(i);
-      bp += Xaux * e(i);
+    if (p > 0) {
+      e += Xb;
+      Qp = P;
+      bp = PM;
+      for (int i = 0; i < N; ++i) {
+        Xaux = prec * c2dxi(i) * X.row(i).t();
+        Qp += Xaux * X.row(i);
+        bp += Xaux * e(i);
+      }
+      beta = RandomMultiNormalC(Qp, bp);
+      Xb = X * beta;
+      e -= Xb;
     }
-    beta = RandomMultiNormalC(Qp, bp);
-    Xb = X * beta;
-    e -= Xb;
 
     // alpha m = 1,...,r
     for (int m = 0; m < r; ++m) {
@@ -1381,7 +1385,9 @@ Rcpp::List spQuantileRcpp(
     
     // keep
     if (iter > 0 && iter % nThin == 0) {
-      keep(save_idx, arma::span(0, p - 1)) = beta.t();
+      if (p > 0) {
+        keep(save_idx, arma::span(0, p - 1)) = beta.t();
+      }
       keep(save_idx, p) = prec;
       
       nCols2 = 0;

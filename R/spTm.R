@@ -216,11 +216,13 @@ spTm <- function(
   y <- stats::model.response(mf, "numeric")
   #attr(mt, "dataClasses") <- sapply(mf, class)
   N <- length(y)
-  if (stats::is.empty.model(mt)) {
+  if (stats::is.empty.model(mt) && 
+      (missing(u) || is.null(u)) && 
+      (missing(v) || is.null(v)) &&
+      !w.bool) {
     x <- NULL
+    p <- 0L
     z <- list(p.params.samples = numeric(), 
-              residuals = y, 
-              fitted.values = 0 * y,
               method = method)
   } else {
     x <- stats::model.matrix(mt, mf)
@@ -403,7 +405,7 @@ spTm <- function(
     time <- Sys.time() - time
     
     colnames(res$params) <- 1:ncol(res$params)
-    if (is.null(colnames(x))) {
+    if (p > 0 && is.null(colnames(x))) {
       colnames(res$params) <- c(paste0("V", 1:p), "sigma")
     } else {
       colnames(res$params) <- c(colnames(x), "sigma")

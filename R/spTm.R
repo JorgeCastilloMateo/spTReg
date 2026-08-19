@@ -37,6 +37,11 @@
 #'   the temporal and spatial coefficients, respectively. The number of columns
 #'   in the matrices should be \eqn{T} and \eqn{n}, respectively. (These 
 #'   matrices can have 0 columns.) (Currently \code{x_gamma} not working.)
+#' @param hyper.type An integer specifying the hyperparameter structure across 
+#'   processes. Set to \code{1} for distinct hyperparameters per process; \code{2} 
+#'   if the first process has its own hyperparameters and the remaining processes 
+#'   share a common set; or \code{3} if all processes share identical covariance 
+#'   hyperparameters.
 #' @param w.bool a logical that indicates whether or not to include
 #'   \deqn{\mathbf{w}_{t\ell}} in the model.
 #' @param data a data frame object with named columns giving the data to be 
@@ -125,6 +130,7 @@ spTm <- function(
   v,
   x_gamma, # list of design matrix for each tp process
   x_alpha, # list of design matrix for each sp process
+  hyper.type = c("1", "2", "3"),
   w.bool = FALSE, # daily dynamic spatial process
   data, 
   subset,
@@ -185,6 +191,8 @@ spTm <- function(
   x = FALSE, 
   y = FALSE,
   ...) {
+  
+  hyper.type <- as.numeric(match.arg(hyper.type))
   
   method <- match.arg(method)
   method.mean <- method == "mean"
@@ -319,6 +327,7 @@ spTm <- function(
         r,
         p_tp,
         p_sp,
+        hyper.type,
         w.bool,
         date_site$site - 1,             # s
         date_site$block - 1,            # t
@@ -377,6 +386,7 @@ spTm <- function(
         r,
         p_tp,
         p_sp,
+        hyper.type,
         w.bool,
         date_site$site - 1,             # s
         date_site$block - 1,            # t
@@ -409,14 +419,14 @@ spTm <- function(
     if (!is.null(res$sp)) {
       colnames(res$sp) <- 1:ncol(res$sp)
       for (m in 1:r) {
-        if (is.null(colnames(x_alpha[[m]]))) {
+        if (p_sp[m] > 0 && is.null(colnames(x_alpha[[m]]))) {
           colnames(x_alpha[[m]]) <- paste0("V", 1:p_sp[m])
         }
         idx <- (m - 1) * (n + mean(p_sp[1:(m-1)]) + 2) + 1:(n + p_sp[m] + 2)
         res$sp[,idx[length(idx) - 1]] <- 1 / sqrt(res$sp[,idx[length(idx) - 1]])
         colnames(res$sp)[idx] <- 
           c(paste0("beta", m, "(s", 1:n, ")"), 
-            paste0(colnames(x_alpha[[m]]), ",", m),
+            if (p_sp[m] > 0) paste0(colnames(x_alpha[[m]]), ",", m) else NULL,
             paste0(c("sigma", "phi"), m))
       }
       

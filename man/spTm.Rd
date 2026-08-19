@@ -10,6 +10,7 @@ spTm(
   v,
   x_gamma,
   x_alpha,
+  hyper.type = c("1", "2", "3"),
   w.bool = FALSE,
   data,
   subset,
@@ -53,6 +54,12 @@ regression variables on which to hierarchically center
 the temporal and spatial coefficients, respectively. The number of columns
 in the matrices should be \eqn{T} and \eqn{n}, respectively. (These 
 matrices can have 0 columns.) (Currently \code{x_gamma} not working.)}
+
+\item{hyper.type}{An integer specifying the hyperparameter structure across 
+processes. Set to \code{1} for distinct hyperparameters per process; \code{2} 
+if the first process has its own hyperparameters and the remaining processes 
+share a common set; or \code{3} if all processes share identical covariance 
+hyperparameters.}
 
 \item{w.bool}{a logical that indicates whether or not to include
 \deqn{\mathbf{w}_{t\ell}} in the model.}

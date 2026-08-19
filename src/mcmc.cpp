@@ -266,6 +266,7 @@ Rcpp::List spMeanRcpp(
     const int r,
     const arma::vec& p_gamma,
     const arma::vec& p_alpha,
+    const int hyper_type,
     const bool wBool,
     const arma::uvec& site,
     const arma::uvec& year,
@@ -308,8 +309,12 @@ Rcpp::List spMeanRcpp(
 
   std::vector<arma::vec> Xb_alpha(r);
   for (int m = 0; m < r; ++m) {
-    if (p_alpha(m) > 0)
+    if (p_alpha(m) > 0) {
       Xb_alpha[m] = X_alpha[m] * beta_alpha[m];
+    } else {
+      Xb_alpha[m] = arma::vec(n, arma::fill::zeros);
+    }
+      
   }
   
   // aux GP
@@ -336,9 +341,21 @@ Rcpp::List spMeanRcpp(
   arma::vec Rlogdet(r);
   std::vector<arma::mat> xR(r);
   
-  for (int m = 0; m < r; ++m) {
-    R.slice(m) = arma::inv_sympd(exp(- hp_alpha(1, m) * dist));
-    Rlogdet(m) = arma::log_det_sympd(R.slice(m));
+  if (hyper_type == 1) {
+    for (int m = 0; m < r; ++m) {
+      R.slice(m) = arma::inv_sympd(exp(- hp_alpha(1, m) * dist));
+      Rlogdet(m) = arma::log_det_sympd(R.slice(m));
+    }
+  } else if (hyper_type == 2) {
+    for (int m = 0; m < std::min(2, r); ++m) {
+      R.slice(m) = arma::inv_sympd(exp(- hp_alpha(1, m) * dist));
+      Rlogdet(m) = arma::log_det_sympd(R.slice(m));
+    }
+  } else if (hyper_type == 3) {
+    if (r > 0) {
+      R.slice(0) = arma::inv_sympd(exp(- hp_alpha(1, 0) * dist));
+      Rlogdet(0) = arma::log_det_sympd(R.slice(0));
+    }
   }
   
   double decay_aux;
@@ -405,6 +422,11 @@ Rcpp::List spMeanRcpp(
   double A = 0.5 * N + prior_sigma(0);
   double B;
   arma::vec C = 0.5 * n + prior_sigma_alpha.row(0).t();
+  if (hyper_type == 2) {
+    C(arma::span(1, r - 1)).fill(0.5 * n * (r - 1) + prior_sigma_alpha(0, 1));
+  } else if (hyper_type == 3) {
+    C.fill(0.5 * n * r + prior_sigma_alpha(0, 0));
+  }
   double D;
   double E = 0.5 * N + prior_sigma_w(0);
   double F;
@@ -451,7 +473,17 @@ Rcpp::List spMeanRcpp(
       alpha_m = alpha.col(m);
       V_m = V.col(m);
       e += V_m % alpha_m.elem(site);
-      Qn = hp_alpha(0, m) * R.slice(m);
+      if (hyper_type == 1) {
+        Qn = hp_alpha(0, m) * R.slice(m);
+      } else if (hyper_type == 2) {
+        if (m == 0) {
+          Qn = hp_alpha(0, m) * R.slice(m);
+        } else {
+          Qn = hp_alpha(0, 1) * R.slice(1);
+        }
+      } else if (hyper_type == 3) {
+        Qn = hp_alpha(0, 0) * R.slice(0);
+      }
       bn = Qn * Xb_alpha[m];
       for (int i = 0; i < n; ++i) {
         V_block = V_m.elem(site_group[i]);
@@ -466,42 +498,140 @@ Rcpp::List spMeanRcpp(
       
       // mu 
       if (p_alpha(m) > 0) {
-        xR[m] = hp_alpha(0, m) * X_alpha[m].t() * R.slice(m);
+        if (hyper_type == 1) {
+          xR[m] = hp_alpha(0, m) * X_alpha[m].t() * R.slice(m);
+        } else if (hyper_type == 2) {
+          if (m == 0) {
+            xR[m] = hp_alpha(0, m) * X_alpha[m].t() * R.slice(m);
+          } else {
+            xR[m] = hp_alpha(0, 1) * X_alpha[m].t() * R.slice(1);
+          }
+        } else if (hyper_type == 3) {
+          xR[m] = hp_alpha(0, 0) * X_alpha[m].t() * R.slice(0);
+        }
         Qp_alpha[m] = xR[m] * X_alpha[m] + P_beta_alpha[m];
         bp_alpha[m] = xR[m] * alpha_m + PM_beta_alpha[m];
         beta_alpha[m] = RandomMultiNormalC(Qp_alpha[m], bp_alpha[m]);
         Xb_alpha[m] = X_alpha[m] * beta_alpha[m];
       }
       
-      // phi
-      vn   = alpha_m - Xb_alpha[m];
-      vtRv = arma::as_scalar(vn.t() * R.slice(m) * vn);
-      
-      ldecay_aux = R::rnorm(ldecay(m), sd(m));
+      if (hyper_type == 1 || (hyper_type == 2 && m == 0)) {
+        // phi local
+        vn   = alpha_m - Xb_alpha[m];
+        vtRv = arma::as_scalar(vn.t() * R.slice(m) * vn);
+        
+        ldecay_aux = R::rnorm(ldecay(m), sd(m));
+        decay_aux = exp(ldecay_aux);
+        S_aux = exp(- decay_aux * dist);
+        ok = arma::inv_sympd(R_aux, S_aux);
+        if (ok) ok = arma::log_det_sympd(Rlogdet_aux, R_aux);
+        if (ok) {
+          vtRv_aux = arma::as_scalar(vn.t() * R_aux * vn);
+          ALPHA = 
+            0.5 * (Rlogdet_aux - Rlogdet(m) + 
+            hp_alpha(0, m) * (vtRv - vtRv_aux)) +
+            prior_phi_alpha(0, m) * (ldecay_aux - ldecay(m)) + 
+            prior_phi_alpha(1, m) * (hp_alpha(1, m) - decay_aux);
+          if (log(R::runif(0, 1)) < ALPHA) {
+            ++accept(m);
+            ldecay(m) = ldecay_aux;
+            hp_alpha(1, m) = decay_aux;
+            R.slice(m) = R_aux;
+            Rlogdet(m) = Rlogdet_aux;
+            vtRv = vtRv_aux;
+          }
+        }
+        
+        // prec local
+        D = 0.5 * vtRv + prior_sigma_alpha(1, m);
+        hp_alpha(0, m) = R::rgamma(C(m), 1.0 / D);
+      }
+    }
+    if (hyper_type == 2 && r > 1) {
+      // phi global - 1
+      vtRv = 0;
+      for (int m = 1; m < r; ++m) {
+        vn   = alpha.col(m) - Xb_alpha[m];
+        vtRv += arma::as_scalar(vn.t() * R.slice(1) * vn);
+      }
+      ldecay_aux = R::rnorm(ldecay(1), sd(1));
       decay_aux = exp(ldecay_aux);
       S_aux = exp(- decay_aux * dist);
       ok = arma::inv_sympd(R_aux, S_aux);
       if (ok) ok = arma::log_det_sympd(Rlogdet_aux, R_aux);
       if (ok) {
-        vtRv_aux = arma::as_scalar(vn.t() * R_aux * vn);
+        vtRv_aux = 0;
+        for (int m = 1; m < r; ++m) {
+          vn       = alpha.col(m) - Xb_alpha[m];
+          vtRv_aux += arma::as_scalar(vn.t() * R_aux * vn);
+        }
+        
         ALPHA = 
-          0.5 * (Rlogdet_aux - Rlogdet(m) + 
-          hp_alpha(0, m) * (vtRv - vtRv_aux)) +
-          prior_phi_alpha(0, m) * (ldecay_aux - ldecay(m)) + 
-          prior_phi_alpha(1, m) * (hp_alpha(1, m) - decay_aux);
+          0.5 * ((r - 1) * (Rlogdet_aux - Rlogdet(1)) + 
+          hp_alpha(0, 1) * (vtRv - vtRv_aux)) +
+          prior_phi_alpha(0, 1) * (ldecay_aux - ldecay(1)) + 
+          prior_phi_alpha(1, 1) * (hp_alpha(1, 1) - decay_aux);
         if (log(R::runif(0, 1)) < ALPHA) {
-          ++accept(m);
-          ldecay(m) = ldecay_aux;
-          hp_alpha(1, m) = decay_aux;
-          R.slice(m) = R_aux;
-          Rlogdet(m) = Rlogdet_aux;
+          ++accept(1);
+          ldecay(1) = ldecay_aux;
+          hp_alpha(1, 1) = decay_aux;
+          R.slice(1) = R_aux;
+          Rlogdet(1) = Rlogdet_aux;
           vtRv = vtRv_aux;
         }
       }
       
-      // prec
-      D = 0.5 * vtRv + prior_sigma_alpha(1, m);
-      hp_alpha(0, m) = R::rgamma(C(m), 1.0 / D);
+      // prec global - 1
+      D = 0.5 * vtRv + prior_sigma_alpha(1, 1);
+      hp_alpha(0, 1) = R::rgamma(C(1), 1.0 / D);
+      
+      if (r > 2) {
+        accept(arma::span(2, r - 1)).fill(accept(1));
+        hp_alpha.cols(2, r - 1).each_col() = hp_alpha.col(1);
+      }
+      
+    } else if (hyper_type == 3 && r > 0) {
+      // phi global
+      vtRv = 0;
+      for (int m = 0; m < r; ++m) {
+        vn   = alpha.col(m) - Xb_alpha[m];
+        vtRv += arma::as_scalar(vn.t() * R.slice(0) * vn);
+      }
+      ldecay_aux = R::rnorm(ldecay(0), sd(0));
+      decay_aux = exp(ldecay_aux);
+      S_aux = exp(- decay_aux * dist);
+      ok = arma::inv_sympd(R_aux, S_aux);
+      if (ok) ok = arma::log_det_sympd(Rlogdet_aux, R_aux);
+      if (ok) {
+        vtRv_aux = 0;
+        for (int m = 0; m < r; ++m) {
+          vn       = alpha.col(m) - Xb_alpha[m];
+          vtRv_aux += arma::as_scalar(vn.t() * R_aux * vn);
+        }
+        
+        ALPHA = 
+          0.5 * (r * (Rlogdet_aux - Rlogdet(0)) + 
+          hp_alpha(0, 0) * (vtRv - vtRv_aux)) +
+          prior_phi_alpha(0, 0) * (ldecay_aux - ldecay(0)) + 
+          prior_phi_alpha(1, 0) * (hp_alpha(1, 0) - decay_aux);
+        if (log(R::runif(0, 1)) < ALPHA) {
+          ++accept(0);
+          ldecay(0) = ldecay_aux;
+          hp_alpha(1, 0) = decay_aux;
+          R.slice(0) = R_aux;
+          Rlogdet(0) = Rlogdet_aux;
+          vtRv = vtRv_aux;
+        }
+      }
+      
+      // prec global
+      D = 0.5 * vtRv + prior_sigma_alpha(1, 0);
+      hp_alpha(0, 0) = R::rgamma(C(0), 1.0 / D);
+      
+      if (r > 1) {
+        accept(arma::span(1, r - 1)).fill(accept(0));
+        hp_alpha.cols(1, r - 1).each_col() = hp_alpha.col(0);
+      }
     }
     
     // w t=1,...,T l=1,...,L
@@ -728,6 +858,7 @@ Rcpp::List spQuantileRcpp(
     const int r,
     const arma::vec& p_gamma,
     const arma::vec& p_alpha,
+    const int hyper_type,
     const bool wBool,
     const arma::uvec& site,
     const arma::uvec& year,
@@ -781,8 +912,12 @@ Rcpp::List spQuantileRcpp(
   
   std::vector<arma::vec> Xb_alpha(r);
   for (int m = 0; m < r; ++m) {
-    if (p_alpha(m) > 0)
+    if (p_alpha(m) > 0) {
       Xb_alpha[m] = X_alpha[m] * beta_alpha[m];
+    } else {
+      Xb_alpha[m] = arma::vec(n, arma::fill::zeros);
+    }
+      
   }
   
   // aux GP
@@ -810,9 +945,21 @@ Rcpp::List spQuantileRcpp(
   arma::vec Rlogdet(r);
   std::vector<arma::mat> xR(r);
   
-  for (int m = 0; m < r; ++m) {
-    R.slice(m) = arma::inv_sympd(exp(- hp_alpha(1, m) * dist));
-    Rlogdet(m) = arma::log_det_sympd(R.slice(m));
+  if (hyper_type == 1) {
+    for (int m = 0; m < r; ++m) {
+      R.slice(m) = arma::inv_sympd(exp(- hp_alpha(1, m) * dist));
+      Rlogdet(m) = arma::log_det_sympd(R.slice(m));
+    }
+  } else if (hyper_type == 2) {
+    for (int m = 0; m < std::min(2, r); ++m) {
+      R.slice(m) = arma::inv_sympd(exp(- hp_alpha(1, m) * dist));
+      Rlogdet(m) = arma::log_det_sympd(R.slice(m));
+    }
+  } else if (hyper_type == 3) {
+    if (r > 0) {
+      R.slice(0) = arma::inv_sympd(exp(- hp_alpha(1, 0) * dist));
+      Rlogdet(0) = arma::log_det_sympd(R.slice(0));
+    }
   }
   
   double decay_aux;
@@ -879,6 +1026,11 @@ Rcpp::List spQuantileRcpp(
   double A = 1.5 * N + prior_sigma(0);
   double B;
   arma::vec C = 0.5 * n + prior_sigma_alpha.row(0).t();
+  if (hyper_type == 2) {
+    C(arma::span(1, r - 1)).fill(0.5 * n * (r - 1) + prior_sigma_alpha(0, 1));
+  } else if (hyper_type == 3) {
+    C.fill(0.5 * n * r + prior_sigma_alpha(0, 0));
+  }
   double D;
   double E = 0.5 * N + prior_sigma_w(0);
   double F;
@@ -924,7 +1076,17 @@ Rcpp::List spQuantileRcpp(
       alpha_m = alpha.col(m);
       V_m = V.col(m);
       e += V_m % alpha_m.elem(site);
-      Qn = hp_alpha(0, m) * R.slice(m);
+      if (hyper_type == 1) {
+        Qn = hp_alpha(0, m) * R.slice(m);
+      } else if (hyper_type == 2) {
+        if (m == 0) {
+          Qn = hp_alpha(0, m) * R.slice(m);
+        } else {
+          Qn = hp_alpha(0, 1) * R.slice(1);
+        }
+      } else if (hyper_type == 3) {
+        Qn = hp_alpha(0, 0) * R.slice(0);
+      }
       bn = Qn * Xb_alpha[m];
       for (int i = 0; i < n; ++i) {
         V_block = V_m.elem(site_group[i]);
@@ -941,42 +1103,140 @@ Rcpp::List spQuantileRcpp(
 
       // mu 
       if (p_alpha(m) > 0) {
-        xR[m] = hp_alpha(0, m) * X_alpha[m].t() * R.slice(m);
+        if (hyper_type == 1) {
+          xR[m] = hp_alpha(0, m) * X_alpha[m].t() * R.slice(m);
+        } else if (hyper_type == 2) {
+          if (m == 0) {
+            xR[m] = hp_alpha(0, m) * X_alpha[m].t() * R.slice(m);
+          } else {
+            xR[m] = hp_alpha(0, 1) * X_alpha[m].t() * R.slice(1);
+          }
+        } else if (hyper_type == 3) {
+          xR[m] = hp_alpha(0, 0) * X_alpha[m].t() * R.slice(0);
+        }
         Qp_alpha[m] = xR[m] * X_alpha[m] + P_beta_alpha[m];
         bp_alpha[m] = xR[m] * alpha_m + PM_beta_alpha[m];
         beta_alpha[m] = RandomMultiNormalC(Qp_alpha[m], bp_alpha[m]);
         Xb_alpha[m] = X_alpha[m] * beta_alpha[m];
       }
       
-      // phi
-      vn   = alpha_m - Xb_alpha[m];
-      vtRv = arma::as_scalar(vn.t() * R.slice(m) * vn);
-      
-      ldecay_aux = R::rnorm(ldecay(m), sd(m));
+      if (hyper_type == 1 || (hyper_type == 2 && m == 0)) {
+        // phi local
+        vn   = alpha_m - Xb_alpha[m];
+        vtRv = arma::as_scalar(vn.t() * R.slice(m) * vn);
+        
+        ldecay_aux = R::rnorm(ldecay(m), sd(m));
+        decay_aux = exp(ldecay_aux);
+        S_aux = exp(- decay_aux * dist);
+        ok = arma::inv_sympd(R_aux, S_aux);
+        if (ok) ok = arma::log_det_sympd(Rlogdet_aux, R_aux);
+        if (ok) {
+          vtRv_aux = arma::as_scalar(vn.t() * R_aux * vn);
+          ALPHA = 
+            0.5 * (Rlogdet_aux - Rlogdet(m) + 
+            hp_alpha(0, m) * (vtRv - vtRv_aux)) +
+            prior_phi_alpha(0, m) * (ldecay_aux - ldecay(m)) + 
+            prior_phi_alpha(1, m) * (hp_alpha(1, m) - decay_aux);
+          if (log(R::runif(0, 1)) < ALPHA) {
+            ++accept(m);
+            ldecay(m) = ldecay_aux;
+            hp_alpha(1, m) = decay_aux;
+            R.slice(m) = R_aux;
+            Rlogdet(m) = Rlogdet_aux;
+            vtRv = vtRv_aux;
+          }
+        }
+        
+        // prec local
+        D = 0.5 * vtRv + prior_sigma_alpha(1, m);
+        hp_alpha(0, m) = R::rgamma(C(m), 1.0 / D);
+      }
+    }
+    if (hyper_type == 2 && r > 1) {
+      // phi global - 1
+      vtRv = 0;
+      for (int m = 1; m < r; ++m) {
+        vn   = alpha.col(m) - Xb_alpha[m];
+        vtRv += arma::as_scalar(vn.t() * R.slice(1) * vn);
+      }
+      ldecay_aux = R::rnorm(ldecay(1), sd(1));
       decay_aux = exp(ldecay_aux);
       S_aux = exp(- decay_aux * dist);
       ok = arma::inv_sympd(R_aux, S_aux);
       if (ok) ok = arma::log_det_sympd(Rlogdet_aux, R_aux);
       if (ok) {
-        vtRv_aux = arma::as_scalar(vn.t() * R_aux * vn);
+        vtRv_aux = 0;
+        for (int m = 1; m < r; ++m) {
+          vn       = alpha.col(m) - Xb_alpha[m];
+          vtRv_aux += arma::as_scalar(vn.t() * R_aux * vn);
+        }
+        
         ALPHA = 
-          0.5 * (Rlogdet_aux - Rlogdet(m) + 
-          hp_alpha(0, m) * (vtRv - vtRv_aux)) +
-          prior_phi_alpha(0, m) * (ldecay_aux - ldecay(m)) + 
-          prior_phi_alpha(1, m) * (hp_alpha(1, m) - decay_aux);
+          0.5 * ((r - 1) * (Rlogdet_aux - Rlogdet(1)) + 
+          hp_alpha(0, 1) * (vtRv - vtRv_aux)) +
+          prior_phi_alpha(0, 1) * (ldecay_aux - ldecay(1)) + 
+          prior_phi_alpha(1, 1) * (hp_alpha(1, 1) - decay_aux);
         if (log(R::runif(0, 1)) < ALPHA) {
-          ++accept(m);
-          ldecay(m) = ldecay_aux;
-          hp_alpha(1, m) = decay_aux;
-          R.slice(m) = R_aux;
-          Rlogdet(m) = Rlogdet_aux;
+          ++accept(1);
+          ldecay(1) = ldecay_aux;
+          hp_alpha(1, 1) = decay_aux;
+          R.slice(1) = R_aux;
+          Rlogdet(1) = Rlogdet_aux;
           vtRv = vtRv_aux;
         }
       }
       
-      // prec
-      D = 0.5 * vtRv + prior_sigma_alpha(1, m); ;
-      hp_alpha(0, m) = R::rgamma(C(m), 1.0 / D);
+      // prec global - 1
+      D = 0.5 * vtRv + prior_sigma_alpha(1, 1);
+      hp_alpha(0, 1) = R::rgamma(C(1), 1.0 / D);
+      
+      if (r > 2) {
+        accept(arma::span(2, r - 1)).fill(accept(1));
+        hp_alpha.cols(2, r - 1).each_col() = hp_alpha.col(1);
+      }
+      
+    } else if (hyper_type == 3 && r > 0) {
+      // phi global
+      vtRv = 0;
+      for (int m = 0; m < r; ++m) {
+        vn   = alpha.col(m) - Xb_alpha[m];
+        vtRv += arma::as_scalar(vn.t() * R.slice(0) * vn);
+      }
+      ldecay_aux = R::rnorm(ldecay(0), sd(0));
+      decay_aux = exp(ldecay_aux);
+      S_aux = exp(- decay_aux * dist);
+      ok = arma::inv_sympd(R_aux, S_aux);
+      if (ok) ok = arma::log_det_sympd(Rlogdet_aux, R_aux);
+      if (ok) {
+        vtRv_aux = 0;
+        for (int m = 0; m < r; ++m) {
+          vn       = alpha.col(m) - Xb_alpha[m];
+          vtRv_aux += arma::as_scalar(vn.t() * R_aux * vn);
+        }
+        
+        ALPHA = 
+          0.5 * (r * (Rlogdet_aux - Rlogdet(0)) + 
+          hp_alpha(0, 0) * (vtRv - vtRv_aux)) +
+          prior_phi_alpha(0, 0) * (ldecay_aux - ldecay(0)) + 
+          prior_phi_alpha(1, 0) * (hp_alpha(1, 0) - decay_aux);
+        if (log(R::runif(0, 1)) < ALPHA) {
+          ++accept(0);
+          ldecay(0) = ldecay_aux;
+          hp_alpha(1, 0) = decay_aux;
+          R.slice(0) = R_aux;
+          Rlogdet(0) = Rlogdet_aux;
+          vtRv = vtRv_aux;
+        }
+      }
+      
+      // prec global
+      D = 0.5 * vtRv + prior_sigma_alpha(1, 0);
+      hp_alpha(0, 0) = R::rgamma(C(0), 1.0 / D);
+      
+      if (r > 1) {
+        accept(arma::span(1, r - 1)).fill(accept(0));
+        hp_alpha.cols(1, r - 1).each_col() = hp_alpha.col(0);
+      }
     }
     
     // w t=1,...,T l=1,...,L

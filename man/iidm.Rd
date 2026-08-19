@@ -18,8 +18,6 @@ iidm(
   n.burnin = 1000,
   verbose = FALSE,
   n.report = 100,
-  parallel = FALSE,
-  n.threads = 0,
   model = TRUE,
   x = FALSE,
   y = FALSE,
@@ -83,15 +81,6 @@ screen.}
 
 \item{n.report}{the interval to report MCMC progress.}
 
-\item{parallel}{logical; if method="quantile", whether to run the 
-computation in parallel using \code{OpenMP} (default = \code{FALSE}).
-See `Details'.}
-
-\item{n.threads}{integer; number of threads to use when 
-\code{parallel = TRUE}.  
-The default \code{0} uses all available physical cores.  
-This argument is ignored when \code{parallel = FALSE}.}
-
 \item{model, x, y}{logicals; if \code{TRUE} the corresponding components of 
 the fit (the model frame, the model matrix, the response) are returned.}
 
@@ -137,13 +126,6 @@ The function \code{iidm} can fit two types of model, depending on whether
   Priors:
   \deqn{\bm{\beta} \sim N_{p}(\bm{\mu}_{\bm{\beta}}, \bm{\Sigma}_{\bm{\beta}})}
   \deqn{\sigma^{2} \text{ (mean)}, \sigma \text{ (quantile)} \sim IG(a_{\sigma}, b_{\sigma})}
-
-  Parallel execution is only available if the package was compiled with 
-  \code{OpenMP} support. This mode samples the exponential latent variables 
-  for quantile regression in parallel, but the current implementation does 
-  not improve computational times. Parallel and sequential execution are
-  both reproducible with \code{\link{set.seed}}, and the numerical results 
-  between the two modes should be the same.
 }
 \examples{
 ## Annette Dobson (1990) "An Introduction to Generalized Linear Models".

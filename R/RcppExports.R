@@ -5,12 +5,12 @@ iidMeanRcpp <- function(Y, X, M, P, ga, gb, beta, prec, N, p, nSims, nThin, nBur
     .Call('_spTReg_iidMeanRcpp', PACKAGE = 'spTReg', Y, X, M, P, ga, gb, beta, prec, N, p, nSims, nThin, nBurnin, nReport)
 }
 
-iidQuantileRcpp <- function(tau, Y, X, M, P, ga, gb, beta, prec, N, p, nSims, nThin, nBurnin, nReport, parallel, nThreads) {
-    .Call('_spTReg_iidQuantileRcpp', PACKAGE = 'spTReg', tau, Y, X, M, P, ga, gb, beta, prec, N, p, nSims, nThin, nBurnin, nReport, parallel, nThreads)
+iidQuantileRcpp <- function(tau, Y, X, M, P, ga, gb, beta, prec, N, p, nSims, nThin, nBurnin, nReport) {
+    .Call('_spTReg_iidQuantileRcpp', PACKAGE = 'spTReg', tau, Y, X, M, P, ga, gb, beta, prec, N, p, nSims, nThin, nBurnin, nReport)
 }
 
-spMeanRcpp <- function(Y, X, U, V, X_gamma, X_alpha, dist, M, P, prior_sigma, M_beta_gamma, P_beta_gamma, prior_rho_gamma, prior_sigma_gamma, M_beta_alpha, P_beta_alpha, prior_sigma_alpha, prior_phi_alpha, prior_rho_w, prior_sigma_w, prior_phi_w, beta, prec, gamma, beta_gamma, hp_gamma, alpha, beta_alpha, hp_alpha, Wtls, hp_w, N, n, T, L, p, q, r, p_gamma, p_alpha, hyper_type, wBool, site, year, yday, nSims, nThin, nBurnin, nReport) {
-    .Call('_spTReg_spMeanRcpp', PACKAGE = 'spTReg', Y, X, U, V, X_gamma, X_alpha, dist, M, P, prior_sigma, M_beta_gamma, P_beta_gamma, prior_rho_gamma, prior_sigma_gamma, M_beta_alpha, P_beta_alpha, prior_sigma_alpha, prior_phi_alpha, prior_rho_w, prior_sigma_w, prior_phi_w, beta, prec, gamma, beta_gamma, hp_gamma, alpha, beta_alpha, hp_alpha, Wtls, hp_w, N, n, T, L, p, q, r, p_gamma, p_alpha, hyper_type, wBool, site, year, yday, nSims, nThin, nBurnin, nReport)
+spMeanRcpp <- function(Y, X, U, V, X_gamma, X_alpha, dist, M, P, prior_sigma, M_beta_gamma, P_beta_gamma, prior_rho_gamma, prior_sigma_gamma, M_beta_alpha, P_beta_alpha, prior_sigma_alpha, prior_phi_alpha, prior_rho_w, prior_sigma_w, prior_phi_w, beta, prec, gamma, beta_gamma, hp_gamma, alpha, beta_alpha, hp_alpha, Wtls, hp_w, N, n, T, L, p, q, r, p_gamma, p_alpha, hyper_type, wBool, site, year, yday, nSims, nThin, nBurnin, nReport, parallel, nThreads) {
+    .Call('_spTReg_spMeanRcpp', PACKAGE = 'spTReg', Y, X, U, V, X_gamma, X_alpha, dist, M, P, prior_sigma, M_beta_gamma, P_beta_gamma, prior_rho_gamma, prior_sigma_gamma, M_beta_alpha, P_beta_alpha, prior_sigma_alpha, prior_phi_alpha, prior_rho_w, prior_sigma_w, prior_phi_w, beta, prec, gamma, beta_gamma, hp_gamma, alpha, beta_alpha, hp_alpha, Wtls, hp_w, N, n, T, L, p, q, r, p_gamma, p_alpha, hyper_type, wBool, site, year, yday, nSims, nThin, nBurnin, nReport, parallel, nThreads)
 }
 
 spQuantileRcpp <- function(tau, Y, X, U, V, X_gamma, X_alpha, dist, M, P, prior_sigma, M_beta_gamma, P_beta_gamma, prior_rho_gamma, prior_sigma_gamma, M_beta_alpha, P_beta_alpha, prior_sigma_alpha, prior_phi_alpha, prior_rho_w, prior_sigma_w, prior_phi_w, beta, prec, gamma, beta_gamma, hp_gamma, alpha, beta_alpha, hp_alpha, Wtls, hp_w, N, n, T, L, p, q, r, p_gamma, p_alpha, hyper_type, wBool, site, year, yday, nSims, nThin, nBurnin, nReport, parallel, nThreads) {
@@ -61,8 +61,8 @@ rgig <- function(N, a, b, nu) {
     .Call('_spTReg_rgig', PACKAGE = 'spTReg', N, a, b, nu)
 }
 
-rig <- function(N, mu, lambda, parallel, nThreads) {
-    .Call('_spTReg_rig', PACKAGE = 'spTReg', N, mu, lambda, parallel, nThreads)
+rig <- function(N, mu, lambda) {
+    .Call('_spTReg_rig', PACKAGE = 'spTReg', N, mu, lambda)
 }
 
 ralRcpp <- function(sigma, tau) {
@@ -73,8 +73,8 @@ RandomMultiNormalC <- function(Q, b) {
     .Call('_spTReg_RandomMultiNormalC', PACKAGE = 'spTReg', Q, b)
 }
 
-ffbs <- function(Y, rho, Sigma_w, D_list) {
-    .Call('_spTReg_ffbs', PACKAGE = 'spTReg', Y, rho, Sigma_w, D_list)
+ffbs <- function(Y, rho, Sigma_w, D_list, Z) {
+    .Call('_spTReg_ffbs', PACKAGE = 'spTReg', Y, rho, Sigma_w, D_list, Z)
 }
 
 dotW <- function(R, Wtls, indW, rho, T, L, onemrho2) {

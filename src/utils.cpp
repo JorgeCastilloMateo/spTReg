@@ -209,52 +209,25 @@ arma::vec rgig(
 arma::vec rig(
     const int N,
     const arma::vec& mu,
-    const double lambda,
-    const bool parallel,
-    int nThreads) {
+    const double lambda) {
   
   arma::vec X(N);
   arma::vec V = arma::square(arma::randn(N)); // chi^2(1)
   arma::vec U = arma::randu(N);               // uniform
   
-  if (!parallel) {
-    
-    arma::vec C = mu / (2.0 * lambda);
-    double mu_i, X_i, W, P1;
-    
-    for (int i = 0; i < N; ++i) {
-      mu_i = mu(i);
-      W = mu_i * V(i);
-      X_i = mu_i + C(i) * (W - std::sqrt(W * (4.0 * lambda + W)));
-      P1 = mu_i / (mu_i + X_i);
-      if (U(i) > P1)
-        X_i = mu_i * mu_i / X_i;
-      X(i) = X_i;
-    }
-    
-    return X;
-  }
+  arma::vec C = mu / (2.0 * lambda);
+  double mu_i, X_i, W, P1;
   
-#ifdef _OPENMP
-  if (nThreads <= 0)
-    nThreads = omp_get_max_threads();
-  omp_set_num_threads(nThreads);
-#endif
-  
-#ifdef _OPENMP
-#pragma omp parallel for
-#endif
   for (int i = 0; i < N; ++i) {
-    double mu_i = mu(i);
-    double W = mu_i * V(i);
-    double C = mu_i / (2.0 * lambda);
-    double X_i = mu_i + C * (W - std::sqrt(W * (4.0 * lambda + W)));
-    double P1 = mu_i / (mu_i + X_i);
+    mu_i = mu(i);
+    W = mu_i * V(i);
+    X_i = mu_i + C(i) * (W - std::sqrt(W * (4.0 * lambda + W)));
+    P1 = mu_i / (mu_i + X_i);
     if (U(i) > P1)
       X_i = mu_i * mu_i / X_i;
     X(i) = X_i;
   }
-
+  
   return X;
 }
 
@@ -297,7 +270,8 @@ arma::mat ffbs(
     const arma::mat& Y,       // n x T : observations
     const double rho,         // AR parameter
     const arma::mat& Sigma_w, // state conditional covariance
-    const std::vector<arma::vec>& D_list  // list of length T with vec of diag matrices
+    const std::vector<arma::vec>& D_list,  // list of length T with vec of diag matrices
+    const arma::mat& Z        // n x T : random noise N(0,1)
 ) {
   const int n = Y.n_rows;
   const int T = Y.n_cols;
@@ -351,7 +325,7 @@ arma::mat ffbs(
   
   // ---- BACKWARD SAMPLING ----
   // Sample w_T ~ N(m_{T|T}, P_{T|T})
-  W.col(T-1) = m_tt[T] + arma::chol(P_tt[T], "lower") * arma::randn(n);
+  W.col(T-1) = m_tt[T] + arma::chol(P_tt[T], "lower") * Z.col(T-1);
   
   // Backwards recursion
   for (int t = T-1; t >= 1; t--) {
@@ -367,7 +341,7 @@ arma::mat ffbs(
     // Sigma.diag() += 1e-8;
     
     // Sample
-    W.col(t-1) = mu + arma::chol(Sigma, "lower") * arma::randn(n);
+    W.col(t-1) = mu + arma::chol(Sigma, "lower") * Z.col(t-1);
   }
   
   return W;

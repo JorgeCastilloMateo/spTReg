@@ -19,11 +19,8 @@
 #'   for the \eqn{\tau}-th quantile.
 #'
 #'   Parallel execution is only available if the package was compiled with 
-#'   \code{OpenMP} support. This mode samples the exponential latent variables 
-#'   for quantile regression in parallel, but the current implementation does 
-#'   not improve computational times. Parallel and sequential execution are
-#'   both reproducible with \code{\link{set.seed}}, and the numerical results 
-#'   between the two modes should be the same.
+#'   \code{OpenMP} support. This mode implements the FFBS for the 
+#'   spatio-temporal random effects in parallel.
 #'   
 #' @param formula an object of class \code{"\link[stats]{formula}"} (or one 
 #'   that can be coerced to that class): a symbolic description of the model to
@@ -69,6 +66,13 @@
 #'   screen.
 #' @param n.report the interval to report Metropolis sampler acceptance and 
 #'   MCMC progress.
+#' @param parallel logical; whether to run the FFBS
+#'   computation in parallel using \code{OpenMP} (default = \code{FALSE}).
+#'   See `Details'.
+#' @param n.threads integer; number of threads to use when 
+#'   \code{parallel = TRUE}.  
+#'   The default \code{0} uses all available physical cores.  
+#'   This argument is ignored when \code{parallel = FALSE}.
 #' @param ... currently no additional arguments.
 #' 
 #' @return An object of class \code{spTm}, which is a list comprising (this 
@@ -337,7 +341,9 @@ spTm <- function(
         n.samples,
         n.thin,
         n.burnin,
-        n.report
+        n.report,
+        parallel,
+        n.threads
       )
       res$params[, p + 1] <- 1 / sqrt(res$params[, p + 1])
     } else {

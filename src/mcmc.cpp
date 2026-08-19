@@ -117,9 +117,7 @@ Rcpp::List iidQuantileRcpp(
   const int nSims,    // MCMC numbers
   const int nThin,
   const int nBurnin,
-  const int nReport,
-  const bool parallel,// parallel
-  const int nThreads
+  const int nReport
 ) {
   
   // missing index
@@ -169,7 +167,7 @@ Rcpp::List iidQuantileRcpp(
     
     // xi
     e += c1 * xi;
-    xi = 1.0 / rig(N, c4 / arma::abs(e), prec * c3, parallel, nThreads);
+    xi = 1.0 / rig(N, c4 / arma::abs(e), prec * c3);
     c2dxi = c2 / xi;
     e -= c1 * xi;
     
@@ -274,8 +272,13 @@ Rcpp::List spMeanRcpp(
     const int nSims,       // MCMC numbers
     const int nThin,
     const int nBurnin,
-    const int nReport
+    const int nReport,
+    const bool parallel,   // parallel
+    int nThreads
 ) {
+  
+  // proof
+  bool ok;
   
   // missing index
   int nKeep = nSims / nThin;
@@ -285,9 +288,10 @@ Rcpp::List spMeanRcpp(
   const double mean_Y = arma::mean(Y.elem(arma::find_finite(Y)));
   Y.elem(missing_idx).fill(mean_Y);
   
-  // constants
+  // beta
   const arma::mat Xt  = X.t();
   const arma::mat XtX = Xt * X;
+  arma::vec Xb;
   const arma::vec PM = P * M;
   std::vector<arma::vec> PM_beta_alpha(r);
   for (int m = 0; m < r; ++m) {
@@ -295,23 +299,11 @@ Rcpp::List spMeanRcpp(
       PM_beta_alpha[m] = P_beta_alpha[m] * M_beta_alpha[m];
   }
   
-  // residual
-  arma::vec Xb;
-  if (p > 0) {
-    Xb = X * beta;
-  } else {
-    Xb = arma::zeros<arma::vec>(N);
-  }
-  arma::vec e = Y - Xb;
+  // alpha
   arma::vec alpha_m(n);
   arma::vec V_m(N);
   arma::uvec site_missing(missing_n);
-  for (int m = 0; m < r; ++m) {
-    alpha_m = alpha.col(m);
-    V_m = V.col(m);
-    e -= V_m % alpha_m.elem(site);
-  }
-
+  
   std::vector<arma::vec> Xb_alpha(r);
   for (int m = 0; m < r; ++m) {
     if (p_alpha(m) > 0) {
@@ -321,7 +313,6 @@ Rcpp::List spMeanRcpp(
     }
   }
   
-  // aux GP
   std::vector<arma::uvec> site_group(n);
   if (r > 0) {
     for (int i = 0; i < n; ++i) {
@@ -333,8 +324,6 @@ Rcpp::List spMeanRcpp(
   arma::vec V_block(Ndn), e_block(Ndn);
   
   // aux decay
-  bool ok;
-  
   int total = 0;
   arma::vec accept(r, arma::fill::zeros);
   arma::vec ratio(r);
@@ -408,6 +397,35 @@ Rcpp::List spMeanRcpp(
         col_idx++;
       }
     }
+  }
+  
+  // // parallel 
+#ifdef _OPENMP
+  if (parallel) {
+    if (nThreads <= 0) {
+      nThreads = omp_get_max_threads();
+    }
+    omp_set_num_threads(nThreads);
+  }
+#endif
+  
+  arma::ivec start_idx = arma::cumsum(L) - L;
+  
+  std::vector<arma::mat> Z_noise(T);
+  
+  // partial residuals
+  arma::vec e = Y;
+  if (p > 0) {
+    Xb = X * beta;
+    e -= Xb;
+  }
+  for (int m = 0; m < r; ++m) {
+    alpha_m = alpha.col(m);
+    V_m = V.col(m);
+    e -= V_m % alpha_m.elem(site);
+  }
+  if (wBool) {
+    e -= Wtls; 
   }
   
   // full posterior precision rhs of rho
@@ -643,27 +661,43 @@ Rcpp::List spMeanRcpp(
     // w t=1,...,T l=1,...,L
     if (wBool) {
       e += Wtls;
-      col_idx = 0;
+      
       for (int t = 0; t < T; ++t) {
-        std::vector<arma::vec> D_list(L(t), arma::vec(n));
-        arma::mat et(n, L(t));
-        for (int l = 0; l < L(t); ++l) {
+        Z_noise[t] = arma::randn<arma::mat>(n, L(t)); 
+      }
+      
+#ifdef _OPENMP
+#pragma omp parallel for if(parallel) shared(e, Wtls, indW, L, hp_w, S_w, prec, start_idx, Z_noise)
+#endif
+      for (int t = 0; t < T; ++t) {
+        
+        const int current_L = L(t);
+        int local_col_idx = start_idx(t);
+        
+        std::vector<arma::vec> D_list(current_L, arma::vec(n));
+        arma::mat et(n, current_L);
+        
+        for (int l = 0; l < current_L; ++l) {
           D_list[l].fill(1.0 / prec);
-          et.col(l) = e(indW[col_idx]);
-          col_idx++;
+          et.col(l) = e(indW[local_col_idx]);
+          local_col_idx++;
         }
+        
         et = ffbs(
-          et, // n x L_t : observations
+          et, 
           hp_w(0),
           S_w / hp_w(1),
-          D_list
+          D_list,
+          Z_noise[t]
         );
-        col_idx -= L(t);
-        for (int l = 0; l < L(t); ++l) {
-          Wtls(indW[col_idx]) = et.col(l);
-          col_idx++;
+        
+        local_col_idx = start_idx(t); 
+        for (int l = 0; l < current_L; ++l) {
+          Wtls(indW[local_col_idx]) = et.col(l);
+          local_col_idx++;
         }
       }
+      
       e -= Wtls;
       
       //// phi_w
@@ -876,8 +910,11 @@ Rcpp::List spQuantileRcpp(
     const int nBurnin,
     const int nReport,
     const bool parallel,  // parallel
-    const int nThreads
+    int nThreads
 ) {
+  
+  // proof
+  bool ok;
   
   // missing index
   int nKeep = nSims / nThin;
@@ -893,6 +930,14 @@ Rcpp::List spQuantileRcpp(
   const double c2 = tau * (1 - tau) / 2;
   const double c3 = 2 + c1 * c1 * c2;
   const double c4 = sqrt(c3 / c2);
+  
+  // latent
+  arma::vec c2dxi(N);
+  arma::vec Xaux(p);
+  arma::vec xi(N, arma::fill::ones);
+  
+  // beta
+  arma::vec Xb;
   const arma::vec PM = P * M;
   std::vector<arma::vec> PM_beta_alpha(r);
   for (int m = 0; m < r; ++m) {
@@ -900,28 +945,10 @@ Rcpp::List spQuantileRcpp(
       PM_beta_alpha[m] = P_beta_alpha[m] * M_beta_alpha[m];
   }
   
-  // aux
-  arma::vec c2dxi(N);
-  arma::vec Xaux(p);
-  // latent
-  arma::vec xi(N, arma::fill::ones);
-  
-  // residual
-  arma::vec Xb;
-  if (p > 0) {
-    Xb = X * beta;
-  } else {
-    Xb = arma::zeros<arma::vec>(N);
-  }
-  arma::vec e  = Y - Xb - c1 * xi;
+  // alpha
   arma::vec alpha_m(n);
   arma::vec V_m(N);
   arma::uvec site_missing(missing_n);
-  for (int m = 0; m < r; ++m) {
-    alpha_m = alpha.col(m);
-    V_m = V.col(m);
-    e -= V_m % alpha_m.elem(site);
-  }
   
   std::vector<arma::vec> Xb_alpha(r);
   for (int m = 0; m < r; ++m) {
@@ -931,8 +958,7 @@ Rcpp::List spQuantileRcpp(
       Xb_alpha[m] = arma::vec(n, arma::fill::zeros);
     }
   }
-  
-  // aux GP
+
   std::vector<arma::uvec> site_group(n);
   if (r > 0) {
     for (int i = 0; i < n; ++i) {
@@ -945,8 +971,6 @@ Rcpp::List spQuantileRcpp(
   arma::vec c2dxi_block(Ndn), V_c2dxi_block(Ndn);
   
   // aux decay
-  bool ok;
-  
   int total = 0;
   arma::vec accept(r, arma::fill::zeros);
   arma::vec ratio(r);
@@ -1022,6 +1046,35 @@ Rcpp::List spQuantileRcpp(
     }
   }
   
+  // // parallel 
+#ifdef _OPENMP
+  if (parallel) {
+    if (nThreads <= 0) {
+      nThreads = omp_get_max_threads();
+    }
+    omp_set_num_threads(nThreads);
+  }
+#endif
+
+  arma::ivec start_idx = arma::cumsum(L) - L;
+
+  std::vector<arma::mat> Z_noise(T);
+  
+  // partial residual
+  arma::vec e  = Y - c1 * xi;
+  if (p > 0) {
+    Xb = X * beta;
+    e -= Xb;
+  }
+  for (int m = 0; m < r; ++m) {
+    alpha_m = alpha.col(m);
+    V_m = V.col(m);
+    e -= V_m % alpha_m.elem(site);
+  }
+  if (wBool) {
+    e -= Wtls; 
+  }
+  
   // full posterior precision rhs of rho
   double Q1, b1;
   // full posterior Precision rhs of beta
@@ -1066,7 +1119,7 @@ Rcpp::List spQuantileRcpp(
     
     // xi
     e += c1 * xi;
-    xi = 1.0 / rig(N, c4 / arma::abs(e), prec * c3, parallel, nThreads);
+    xi = 1.0 / rig(N, c4 / arma::abs(e), prec * c3);
     c2dxi = c2 / xi;
     e -= c1 * xi;
     
@@ -1256,27 +1309,43 @@ Rcpp::List spQuantileRcpp(
     // w t=1,...,T l=1,...,L
     if (wBool) {
       e += Wtls;
-      col_idx = 0;
+      
       for (int t = 0; t < T; ++t) {
-        std::vector<arma::vec> D_list(L(t), arma::vec(n));
-        arma::mat et(n, L(t));
-        for (int l = 0; l < L(t); ++l) {
-          D_list[l] = 1.0 / (c2dxi(indW[col_idx]) * prec);
-          et.col(l) = e(indW[col_idx]);
-          col_idx++;
+        Z_noise[t] = arma::randn<arma::mat>(n, L(t)); 
+      }
+      
+#ifdef _OPENMP
+#pragma omp parallel for if(parallel) shared(e, Wtls, indW, L, hp_w, S_w, prec, start_idx, Z_noise)
+#endif
+      for (int t = 0; t < T; ++t) {
+        
+        const int current_L = L(t);
+        int local_col_idx = start_idx(t);
+        
+        std::vector<arma::vec> D_list(current_L, arma::vec(n));
+        arma::mat et(n, current_L);
+        
+        for (int l = 0; l < current_L; ++l) {
+          D_list[l] = 1.0 / (c2dxi(indW[local_col_idx]) * prec);
+          et.col(l) = e(indW[local_col_idx]);
+          local_col_idx++;
         }
+        
         et = ffbs(
           et, // n x L_t : observations
           hp_w(0),
           S_w / hp_w(1),
-          D_list
+          D_list,
+          Z_noise[t]
         );
-        col_idx -= L(t);
-        for (int l = 0; l < L(t); ++l) {
-          Wtls(indW[col_idx]) = et.col(l);
-          col_idx++;
+        
+        local_col_idx = start_idx(t);
+        for (int l = 0; l < current_L; ++l) {
+          Wtls(indW[local_col_idx]) = et.col(l);
+          local_col_idx++;
         }
       }
+      
       e -= Wtls;
       
       //// phi_w

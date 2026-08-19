@@ -94,6 +94,15 @@ screen.}
 \item{n.report}{the interval to report Metropolis sampler acceptance and 
 MCMC progress.}
 
+\item{parallel}{logical; whether to run the FFBS
+computation in parallel using \code{OpenMP} (default = \code{FALSE}).
+See `Details'.}
+
+\item{n.threads}{integer; number of threads to use when 
+\code{parallel = TRUE}.  
+The default \code{0} uses all available physical cores.  
+This argument is ignored when \code{parallel = FALSE}.}
+
 \item{...}{currently no additional arguments.}
 
 \item{center.scale}{(not currently available) if \code{TRUE}, non-constant 
@@ -160,11 +169,8 @@ Function working but under development
   for the \eqn{\tau}-th quantile.
 
   Parallel execution is only available if the package was compiled with 
-  \code{OpenMP} support. This mode samples the exponential latent variables 
-  for quantile regression in parallel, but the current implementation does 
-  not improve computational times. Parallel and sequential execution are
-  both reproducible with \code{\link{set.seed}}, and the numerical results 
-  between the two modes should be the same.
+  \code{OpenMP} support. This mode implements the FFBS for the 
+  spatio-temporal random effects in parallel.
 }
 \references{
 Castillo-Mateo J, Lafuente M, Asín J, Cebrián AC, Gelfand AE, Abaurrea J (2022).
